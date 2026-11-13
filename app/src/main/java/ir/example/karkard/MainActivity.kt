@@ -284,7 +284,7 @@ private fun KarbanApp(dao: EntryDao) {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("برنامه هفتگی", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                    TextButton(onClick = { showArchive = !showArchive; weeks = dao.getWeeks() }) { Text(if (showArchive) "بازگشت" else "آرشیو هفته‌ها") }
+                                    TextButton(onClick = { showArchive = !showArchive; if (showArchive) scope.launch { weeks = dao.getWeeks() } }) { Text(if (showArchive) "بازگشت" else "آرشیو هفته‌ها") }
                                 }
                                 Text("هفته جاری بر اساس تقویم دستگاه", color = muted, style = MaterialTheme.typography.bodySmall)
                                 if (showArchive) {
