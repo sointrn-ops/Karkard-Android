@@ -169,7 +169,7 @@ fun KarkardScreen(dao: EntryDao) {
             topBar = {
                 TopAppBar(
                     title = { Column {
-                        Text("کاربان", fontWeight = FontWeight.Bold)
+                        Text("KARBAN", fontWeight = FontWeight.Bold)
                         Text("مدیریت اطلاعات هفتگی", style = MaterialTheme.typography.labelSmall)
                     } },
                     actions = {
@@ -267,7 +267,7 @@ fun KarkardScreen(dao: EntryDao) {
                 title = {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("درباره برنامه", fontWeight = FontWeight.Bold)
-                        Text("کاربان", style = MaterialTheme.typography.titleMedium,
+                        Text("KARBAN", style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary)
                     }
                 },
