@@ -26,6 +26,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,6 +55,55 @@ interface EntryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun save(entry: DailyEntry)
 
+    @Query("DELETE FROM advance_records WHERE weekKey = :week AND dayIndex = :day")
+    suspend fun clearAdvances(week: String, day: Int)
+    @Query("DELETE FROM overtime_records WHERE weekKey = :week AND dayIndex = :day")
+    suspend fun clearOvertime(week: String, day: Int)
+    @Insert suspend fun addAdvances(items: List<AdvanceRecord>)
+    @Insert suspend fun addOvertime(items: List<OvertimeRecord>)
+    @Query("SELECT * FROM advance_records WHERE weekKey = :week AND dayIndex = :day ORDER BY id")
+    suspend fun getAdvances(week: String, day: Int): List<AdvanceRecord>
+    @Query("SELECT * FROM overtime_records WHERE weekKey = :week AND dayIndex = :day ORDER BY id")
+    suspend fun getOvertime(week: String, day: Int): List<OvertimeRecord>
+    @Query("SELECT * FROM deleted_entries ORDER BY deletedAt DESC")
+    suspend fun getTrash(): List<DeletedEntry>
+    @Insert suspend fun addToTrash(entry: DeletedEntry)
+    @Query("DELETE FROM deleted_entries WHERE weekKey = :week AND dayIndex = :day AND deletedAt = :deletedAt")
+    suspend fun removeFromTrash(week: String, day: Int, deletedAt: Long)
+    @Query("DELETE FROM daily_entries WHERE weekKey = :week AND dayIndex = :day")
+    suspend fun deleteDay(week: String, day: Int)
+    @Query("SELECT * FROM daily_entries WHERE dateText LIKE '%' || :query || '%' OR report LIKE '%' || :query || '%' OR advance LIKE '%' || :query || '%' OR overtime LIKE '%' || :query || '%' ORDER BY weekKey DESC, dayIndex")
+    suspend fun searchEntries(query: String): List<DailyEntry>
+    @Query("SELECT * FROM daily_entries WHERE substr(replace(dateText, '-', '/'), 1, 7) = :month ORDER BY dayIndex")
+    suspend fun getMonth(month: String): List<DailyEntry>
+
+    @Transaction
+    suspend fun saveDay(entry: DailyEntry) {
+        save(entry)
+        clearAdvances(entry.weekKey, entry.dayIndex)
+        clearOvertime(entry.weekKey, entry.dayIndex)
+        val advances = entry.advance.lines().map { it.trim() }.filter { it.isNotBlank() }
+            .map { AdvanceRecord(weekKey = entry.weekKey, dayIndex = entry.dayIndex, amount = it) }
+        val overtimeItems = entry.overtime.lines().map { it.trim() }.filter { it.isNotBlank() }
+            .map { OvertimeRecord(weekKey = entry.weekKey, dayIndex = entry.dayIndex, duration = it) }
+        if (advances.isNotEmpty()) addAdvances(advances)
+        if (overtimeItems.isNotEmpty()) addOvertime(overtimeItems)
+    }
+
+    @Transaction
+    suspend fun moveToTrash(entry: DailyEntry, deletedAt: Long) {
+        addToTrash(DeletedEntry(entry.weekKey, entry.dayIndex, entry.dateText, entry.overtime, entry.advance, entry.report, deletedAt))
+        deleteDay(entry.weekKey, entry.dayIndex)
+        clearAdvances(entry.weekKey, entry.dayIndex)
+        clearOvertime(entry.weekKey, entry.dayIndex)
+    }
+
+    @Transaction
+    suspend fun restore(entry: DeletedEntry) {
+        saveDay(DailyEntry(entry.weekKey, entry.dayIndex, entry.dateText, entry.overtime, entry.advance, entry.report))
+        removeFromTrash(entry.weekKey, entry.dayIndex, entry.deletedAt)
+    }
+
     @Query("SELECT * FROM daily_entries ORDER BY weekKey DESC, dayIndex")
     suspend fun getAll(): List<DailyEntry>
 
@@ -68,16 +119,34 @@ interface EntryDao {
     ): Int
 }
 
-@Database(entities = [DailyEntry::class], version = 1, exportSchema = false)
+@Entity(tableName = "advance_records")
+data class AdvanceRecord(@PrimaryKey(autoGenerate = true) val id: Long = 0, val weekKey: String, val dayIndex: Int, val amount: String, val note: String = "")
+
+@Entity(tableName = "overtime_records")
+data class OvertimeRecord(@PrimaryKey(autoGenerate = true) val id: Long = 0, val weekKey: String, val dayIndex: Int, val duration: String, val note: String = "")
+
+@Entity(tableName = "deleted_entries", primaryKeys = ["weekKey", "dayIndex", "deletedAt"])
+data class DeletedEntry(val weekKey: String, val dayIndex: Int, val dateText: String, val overtime: String, val advance: String, val report: String, val deletedAt: Long)
+
+@Database(entities = [DailyEntry::class, AdvanceRecord::class, OvertimeRecord::class, DeletedEntry::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun entryDao(): EntryDao
     companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS advance_records (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, weekKey TEXT NOT NULL, dayIndex INTEGER NOT NULL, amount TEXT NOT NULL, note TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS overtime_records (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, weekKey TEXT NOT NULL, dayIndex INTEGER NOT NULL, duration TEXT NOT NULL, note TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS deleted_entries (weekKey TEXT NOT NULL, dayIndex INTEGER NOT NULL, dateText TEXT NOT NULL, overtime TEXT NOT NULL, advance TEXT NOT NULL, report TEXT NOT NULL, deletedAt INTEGER NOT NULL, PRIMARY KEY(weekKey, dayIndex, deletedAt))")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_advance_records_weekKey_dayIndex ON advance_records(weekKey, dayIndex)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_overtime_records_weekKey_dayIndex ON overtime_records(weekKey, dayIndex)")
+            }
+        }
         @Volatile private var INSTANCE: AppDatabase? = null
         fun get(context: android.content.Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext, AppDatabase::class.java, "karkard.db"
-                ).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
             }
     }
 }
@@ -307,7 +376,7 @@ fun KarkardScreen(dao: EntryDao) {
                                                 if (duplicateCount > 0) {
                                                     message = "این اطلاعات برای روز دیگری در همین هفته ثبت شده است؛ ثبت تکراری متوقف شد."
                                                 } else {
-                                                    dao.save(DailyEntry(weekKey.value, entry.dayIndex, date, overtime, advance, report))
+                                                    dao.saveDay(DailyEntry(weekKey.value, entry.dayIndex, date, overtime, advance, report))
                                                     message = "اطلاعات روز ذخیره شد."
                                                     allWeeks = dao.getWeeks()
                                                     refresh()
