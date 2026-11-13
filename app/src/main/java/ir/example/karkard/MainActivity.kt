@@ -38,10 +38,10 @@ data class DailyEntry(
     val overtime: String = "", val advance: String = "", val report: String = ""
 )
 
-@Entity(tableName = "advance_records")
+@Entity(tableName = "advance_records", indices = [Index(value = ["weekKey", "dayIndex"])])
 data class AdvanceRecord(@PrimaryKey(autoGenerate = true) val id: Long = 0, val weekKey: String, val dayIndex: Int, val amount: String, val note: String = "")
 
-@Entity(tableName = "overtime_records")
+@Entity(tableName = "overtime_records", indices = [Index(value = ["weekKey", "dayIndex"])])
 data class OvertimeRecord(@PrimaryKey(autoGenerate = true) val id: Long = 0, val weekKey: String, val dayIndex: Int, val duration: String, val note: String = "")
 
 @Entity(tableName = "deleted_entries", primaryKeys = ["weekKey", "dayIndex", "deletedAt"])
