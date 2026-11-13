@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -405,7 +406,7 @@ private fun KarbanApp(dao: EntryDao) {
                                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                                     Row(Modifier.width(810.dp).background(forest, RoundedCornerShape(10.dp)).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                                         listOf("تاریخ", "روز", "اضافه‌کار", "مساعده", "گزارشات").forEachIndexed { index, title ->
-                                            Text(title, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.width(listOf(130, 100, 170, 170, 240)[index]).padding(horizontal = 8.dp))
+                                            Text(title, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.width(listOf(130, 100, 170, 170, 240)[index].dp).padding(horizontal = 8.dp))
                                         }
                                     }
                                 }
