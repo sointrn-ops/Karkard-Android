@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.Calendar
 
 @Entity(tableName = "daily_entries", primaryKeys = ["weekKey", "dayIndex"])
 data class DailyEntry(
@@ -88,15 +89,35 @@ fun KarkardScreen(dao: EntryDao) {
     var allWeeks by remember { mutableStateOf(emptyList<String>()) }
     var showHistory by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(true) }
 
     fun refresh() {
         scope.launch {
-            val saved = dao.getWeek(weekKey.value).associateBy { it.dayIndex }
-            rows = days.indices.map { saved[it] ?: DailyEntry(weekKey.value, it) }
-            allWeeks = dao.getWeeks()
+            isLoading = true
+            try {
+                val saved = dao.getWeek(weekKey.value).associateBy { it.dayIndex }
+                rows = days.indices.map { saved[it] ?: DailyEntry(weekKey.value, it) }
+                allWeeks = dao.getWeeks()
+            } catch (e: Exception) {
+                message = "بارگذاری اطلاعات ناموفق بود."
+            } finally {
+                isLoading = false
+            }
         }
     }
-    LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(weekKey.value) { refresh() }
+
+    val persianLocale = remember { Locale("fa", "IR") }
+    val weekRangeLabel = remember {
+        val calendar = Calendar.getInstance(persianLocale)
+        calendar.firstDayOfWeek = Calendar.SATURDAY
+        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SATURDAY)
+        val start = calendar.time
+        calendar.add(Calendar.DAY_OF_MONTH, 5)
+        val end = calendar.time
+        val formatter = SimpleDateFormat("yyyy/MM/dd", persianLocale)
+        "${formatter.format(start)} تا ${formatter.format(end)}"
+    }
 
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         if (uri != null) scope.launch {
@@ -155,7 +176,11 @@ fun KarkardScreen(dao: EntryDao) {
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
-            LazyColumn(
+            if (isLoading) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(bottom = 28.dp, top = 8.dp)
@@ -174,7 +199,7 @@ fun KarkardScreen(dao: EntryDao) {
                                 }
                                 if (allWeeks.isEmpty()) Text("هنوز اطلاعاتی ذخیره نشده است.")
                             } else {
-                                Text("شناسه هفته: ${weekKey.value}", color = MaterialTheme.colorScheme.secondary)
+                                Text("بازه هفته (شمسی): $weekRangeLabel", color = MaterialTheme.colorScheme.secondary)
                                 Text("اطلاعات هر روز را وارد کنید و دکمه ذخیره همان روز را بزنید.",
                                     style = MaterialTheme.typography.bodySmall)
                             }
