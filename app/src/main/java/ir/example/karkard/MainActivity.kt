@@ -173,8 +173,37 @@ private fun jalaliWeekStart(offset:Int):Calendar {
  val afterSaturday=if(dow==Calendar.SATURDAY) 0 else dow
  c.add(Calendar.DAY_OF_MONTH,-afterSaturday+offset*7); return c
 }
+private fun jalaliToGregorian(jy:Int,jm:Int,jd:Int):Calendar {
+    val target=String.format(Locale.US,"%04d/%02d/%02d",jy,jm,jd)
+    val cal=Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"), Locale.US)
+    cal.clear()
+    cal.set(jy+619, Calendar.JANUARY, 1)
+    var low=cal.timeInMillis/86400000L
+    cal.clear()
+    cal.set(jy+623, Calendar.DECEMBER, 31)
+    var high=cal.timeInMillis/86400000L
+    while(low<=high) {
+        val mid=(low+high) ushr 1
+        val candidate=Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"), Locale.US)
+        candidate.timeInMillis=mid*86400000L
+        val value=jalaliDate(candidate)
+        when {
+            value<target -> low=mid+1
+            value>target -> high=mid-1
+            else -> return candidate
+        }
+    }
+    throw IllegalArgumentException("Invalid Jalali date: $target")
+}
+private fun jalaliWeekStartFromKey(key:String):Calendar {
+    val digits=key.removePrefix("J")
+    require(digits.length==8 && digits.all { it.isDigit() }) { "Invalid week key" }
+    return jalaliToGregorian(digits.substring(0,4).toInt(),digits.substring(4,6).toInt(),digits.substring(6,8).toInt())
+}
 private fun jalaliWeekKey(offset:Int):String = "J"+jalaliDate(jalaliWeekStart(offset)).replace("/","")
-private fun jalaliDateForDay(offset:Int,index:Int):String { val c=jalaliWeekStart(offset); c.add(Calendar.DAY_OF_MONTH,index); return jalaliDate(c) }
+private fun jalaliDateForDay(weekKey:String,index:Int):String {
+    val c=jalaliWeekStartFromKey(weekKey); c.add(Calendar.DAY_OF_MONTH,index); return jalaliDate(c)
+}
 private fun amountValue(raw: String): Double = raw
     .replace('۰','0').replace('۱','1').replace('۲','2').replace('۳','3').replace('۴','4')
     .replace('۵','5').replace('۶','6').replace('۷','7').replace('۸','8').replace('۹','9')
@@ -235,19 +264,34 @@ private fun KarbanApp(dao: EntryDao) {
         if (uri != null) scope.launch {
             val entries = dao.getAll()
             val pdf = PdfDocument()
-            val info = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-            val p = pdf.startPage(info)
-            val paint = Paint().apply { textSize = 12f; color = android.graphics.Color.BLACK }
+            val paint = Paint().apply { textSize = 11f; color = android.graphics.Color.BLACK }
+            var pageNumber = 1
+            var page = pdf.startPage(PdfDocument.PageInfo.Builder(595, 842, pageNumber).create())
             var y = 48f
-            p.canvas.drawText("KARBAN - Work Report", 36f, y, paint); y += 28f
-            entries.forEach { e ->
-                if (y < 800f) {
-                    p.canvas.drawText("${e.dateText} | ${karbanDays.getOrElse(e.dayIndex) { "" }} | Advance: ${e.advance} | OT: ${e.overtime}", 36f, y, paint)
-                    y += 20f
-                    if (e.report.isNotBlank() && y < 800f) { p.canvas.drawText("Report: ${e.report.take(85)}", 48f, y, paint); y += 20f }
-                }
+            fun startNextPage() {
+                pdf.finishPage(page)
+                pageNumber++
+                page = pdf.startPage(PdfDocument.PageInfo.Builder(595, 842, pageNumber).create())
+                y = 48f
+                page.canvas.drawText("KARBAN - Work Report (continued)", 36f, y, paint)
+                y += 26f
             }
-            pdf.finishPage(p)
+            page.canvas.drawText("KARBAN - Work Report", 36f, y, paint); y += 28f
+            entries.forEach { e ->
+                val lines = buildList {
+                    add("${e.dateText} | ${karbanDays.getOrElse(e.dayIndex) { "" }}")
+                    if (e.advance.isNotBlank()) add("Advance: ${e.advance.replace("\\n", "، ")}")
+                    if (e.overtime.isNotBlank()) add("Overtime: ${e.overtime.replace("\\n", "، ")}")
+                    if (e.report.isNotBlank()) add("Report: ${e.report.replace("\\n", " ").take(180)}")
+                }
+                lines.forEach { line ->
+                    if (y > 790f) startNextPage()
+                    page.canvas.drawText(line.take(95), 36f, y, paint)
+                    y += 18f
+                }
+                y += 8f
+            }
+            pdf.finishPage(page)
             context.contentResolver.openOutputStream(uri)?.use { pdf.writeTo(it) }
             pdf.close()
             notice = "گزارش PDF ذخیره شد."
@@ -351,7 +395,7 @@ private fun KarbanApp(dao: EntryDao) {
                         }
                     }
                     if (!showArchive) items(rows, key = { it.dayIndex }) { entry ->
-                        var date by remember(entry.weekKey, entry.dayIndex, entry.dateText) { mutableStateOf(entry.dateText.ifBlank { jalaliDateForDay(weekOffset, entry.dayIndex) }) }
+                        var date by remember(entry.weekKey, entry.dayIndex, entry.dateText) { mutableStateOf(entry.dateText.ifBlank { jalaliDateForDay(entry.weekKey, entry.dayIndex) }) }
                         var ot by remember(entry.weekKey, entry.dayIndex, entry.overtime) { mutableStateOf(entry.overtime) }
                         var adv by remember(entry.weekKey, entry.dayIndex, entry.advance) { mutableStateOf(entry.advance) }
                         var report by remember(entry.weekKey, entry.dayIndex, entry.report) { mutableStateOf(entry.report) }
