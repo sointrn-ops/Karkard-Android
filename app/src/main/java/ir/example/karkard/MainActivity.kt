@@ -175,6 +175,7 @@ private fun KarbanApp(dao: EntryDao) {
     var trash by remember { mutableStateOf(emptyList<DeletedEntry>()) }
     var searchResults by remember { mutableStateOf(emptyList<DailyEntry>()) }
     var searchText by remember { mutableStateOf("") }
+    var monthFilter by remember { mutableStateOf("") }
     var page by remember { mutableStateOf("ثبت روزانه") }
     var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf("") }
@@ -385,11 +386,14 @@ private fun KarbanApp(dao: EntryDao) {
                     val all = remember { mutableStateOf(emptyList<DailyEntry>()) }
                     LaunchedEffect(page) { all.value = dao.getAll() }
                     val entries = all.value
-                    val savedDays = entries.count { it.dateText.isNotBlank() || it.report.isNotBlank() || it.advance.isNotBlank() || it.overtime.isNotBlank() }
-                    val advances = entries.sumOf { it.advance.lines().sumOf(::amountValue) }
-                    val overtimeCount = entries.sumOf { it.overtime.lines().count { line -> line.isNotBlank() } }
+                    val monthKey = monthFilter.trim().replace('۰','0').replace('۱','1').replace('۲','2').replace('۳','3').replace('۴','4').replace('۵','5').replace('۶','6').replace('۷','7').replace('۸','8').replace('۹','9')
+                    val filteredEntries = if (monthKey.isBlank()) entries else entries.filter { it.dateText.replace('۰','0').replace('۱','1').replace('۲','2').replace('۳','3').replace('۴','4').replace('۵','5').replace('۶','6').replace('۷','7').replace('۸','8').replace('۹','9').startsWith(monthKey) }
+                    val savedDays = filteredEntries.count { it.dateText.isNotBlank() || it.report.isNotBlank() || it.advance.isNotBlank() || it.overtime.isNotBlank() }
+                    val advances = filteredEntries.sumOf { it.advance.lines().sumOf(::amountValue) }
+                    val overtimeCount = filteredEntries.sumOf { it.overtime.lines().count { line -> line.isNotBlank() } }
                     LazyColumn(Modifier.fillMaxSize().padding(pad).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
-                        item { Text("گزارش عملکرد", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("نمای کلی سوابق ثبت‌شده در دستگاه", color = muted) }
+                        item { Text("گزارش عملکرد", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("گزارش ماهانه و سوابق ثبت‌شده", color = muted) }
+                        item { OutlinedTextField(monthFilter, { monthFilter = it }, modifier = Modifier.fillMaxWidth(), label = { Text("فیلتر ماه شمسی؛ مانند ۱۴۰۵/۰۸") }, placeholder = { Text("خالی = همه ماه‌ها") }, singleLine = true, shape = RoundedCornerShape(14.dp)) }
                         item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             SummaryCard("روزهای دارای اطلاعات", "$savedDays", Modifier.weight(1f))
                             SummaryCard("نوبت‌های اضافه‌کاری", "$overtimeCount", Modifier.weight(1f))
@@ -398,19 +402,19 @@ private fun KarbanApp(dao: EntryDao) {
                         item { Card(shape = RoundedCornerShape(20.dp)) {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("گزارش مساعده", fontWeight = FontWeight.Bold)
-                                entries.filter { it.advance.isNotBlank() }.forEach { e ->
+                                filteredEntries.filter { it.advance.isNotBlank() }.forEach { e ->
                                     Text("${e.dateText.ifBlank { e.weekKey }} • ${karbanDays.getOrElse(e.dayIndex) { "" }}: ${e.advance.replace("\n", "، ")}")
                                 }
-                                if (entries.none { it.advance.isNotBlank() }) Text("هنوز مساعده‌ای ثبت نشده است.", color = muted)
+                                if (filteredEntries.none { it.advance.isNotBlank() }) Text("هنوز مساعده‌ای ثبت نشده است.", color = muted)
                             }
                         } }
                         item { Card(shape = RoundedCornerShape(20.dp)) {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("گزارش اضافه‌کاری", fontWeight = FontWeight.Bold)
-                                entries.filter { it.overtime.isNotBlank() }.forEach { e ->
+                                filteredEntries.filter { it.overtime.isNotBlank() }.forEach { e ->
                                     Text("${e.dateText.ifBlank { e.weekKey }} • ${karbanDays.getOrElse(e.dayIndex) { "" }}: ${e.overtime.replace("\n", "، ")}")
                                 }
-                                if (entries.none { it.overtime.isNotBlank() }) Text("هنوز اضافه‌کاری ثبت نشده است.", color = muted)
+                                if (filteredEntries.none { it.overtime.isNotBlank() }) Text("هنوز اضافه‌کاری ثبت نشده است.", color = muted)
                             }
                         } }
                         item { Card(shape = RoundedCornerShape(20.dp)) {
