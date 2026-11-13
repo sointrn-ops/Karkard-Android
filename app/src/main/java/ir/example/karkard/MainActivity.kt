@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
 import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -88,6 +90,7 @@ fun KarkardScreen(dao: EntryDao) {
     var rows by remember { mutableStateOf(days.indices.map { DailyEntry(weekKey.value, it) }) }
     var allWeeks by remember { mutableStateOf(emptyList<String>()) }
     var showHistory by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -170,6 +173,7 @@ fun KarkardScreen(dao: EntryDao) {
                         Text("مدیریت اطلاعات هفتگی", style = MaterialTheme.typography.labelSmall)
                     } },
                     actions = {
+                        TextButton(onClick = { showAbout = true }) { Text("درباره برنامه") }
                         TextButton(onClick = { showHistory = !showHistory; refresh() }) { Text("آرشیو") }
                     }
                 )
@@ -256,6 +260,46 @@ fun KarkardScreen(dao: EntryDao) {
                 }
                 if (message.isNotBlank()) item { Text(message, color = MaterialTheme.colorScheme.primary) }
             }
+        }
+        if (showAbout) {
+            AlertDialog(
+                onDismissRequest = { showAbout = false },
+                title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("درباره برنامه", fontWeight = FontWeight.Bold)
+                        Text("ثبت کارکرد", style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("نسخه برنامه: 1.0")
+                        Text("طراحی و توسعه: محمد جواد احمدی", fontWeight = FontWeight.SemiBold)
+                        HorizontalDivider()
+                        Text("ارتباط با سازنده", fontWeight = FontWeight.Bold)
+                        Text("برای تماس، یکی از شماره‌های زیر را انتخاب کنید:")
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:09017975131"))
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("۰۹۰۱۷۹۷۵۱۳۱  •  تماس") }
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:09904711802"))
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("۰۹۹۰۴۷۱۱۸۰۲  •  تماس") }
+                        Text("© تمامی حقوق محفوظ است", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAbout = false }) { Text("بستن") }
+                }
+            )
         }
     }
 }
