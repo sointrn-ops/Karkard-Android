@@ -55,6 +55,17 @@ interface EntryDao {
 
     @Query("SELECT * FROM daily_entries ORDER BY weekKey DESC, dayIndex")
     suspend fun getAll(): List<DailyEntry>
+
+    @Query("""
+        SELECT COUNT(*) FROM daily_entries
+        WHERE weekKey = :week AND dayIndex != :day
+        AND dateText = :date AND advance = :advance
+        AND overtime = :overtime AND report = :report
+    """)
+    suspend fun countDuplicate(
+        week: String, day: Int, date: String,
+        advance: String, overtime: String, report: String
+    ): Int
 }
 
 @Database(entities = [DailyEntry::class], version = 1, exportSchema = false)
@@ -223,6 +234,18 @@ fun KarkardScreen(dao: EntryDao) {
                                 Text("بازه هفته (شمسی): $weekRangeLabel", color = MaterialTheme.colorScheme.secondary)
                                 Text("اطلاعات هر روز را وارد کنید و دکمه ذخیره همان روز را بزنید.",
                                     style = MaterialTheme.typography.bodySmall)
+                                val incompleteCount = rows.count {
+                                    (it.dateText.isNotBlank() || it.advance.isNotBlank() ||
+                                        it.overtime.isNotBlank() || it.report.isNotBlank()) &&
+                                        it.dateText.isBlank()
+                                }
+                                if (incompleteCount > 0) {
+                                    Text(
+                                        "هشدار: برای ${incompleteCount} روز اطلاعاتی وارد شده اما تاریخ ثبت نشده است.",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                     }
@@ -238,24 +261,62 @@ fun KarkardScreen(dao: EntryDao) {
                                 Text(days[entry.dayIndex], fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 OutlinedTextField(date, { date = it }, label = { Text("تاریخ شمسی") },
                                     placeholder = { Text("مثلاً ۱۴۰۵/۰۸/۲۲") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                                OutlinedTextField(overtime, { overtime = it }, label = { Text("اضافه‌کار") },
-                                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                                OutlinedTextField(advance, { advance = it }, label = { Text("مساعده") },
-                                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                                OutlinedTextField(
+                                    overtime, { overtime = it },
+                                    label = { Text("اضافه‌کاری (هر نوبت در یک خط)") },
+                                    modifier = Modifier.fillMaxWidth(), minLines = 2,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                )
+                                OutlinedTextField(
+                                    advance, { advance = it },
+                                    label = { Text("مساعده (هر مورد در یک خط)") },
+                                    modifier = Modifier.fillMaxWidth(), minLines = 2,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                )
                                 OutlinedTextField(report, { report = it }, label = { Text("گزارشات روز") },
                                     modifier = Modifier.fillMaxWidth(), minLines = 2)
-                                Button(
-                                    onClick = {
-                                        scope.launch {
-                                            dao.save(DailyEntry(weekKey.value, entry.dayIndex, date, overtime, advance, report))
-                                            message = "اطلاعات ${days[entry.dayIndex]} ذخیره شد."
-                                            allWeeks = dao.getWeeks()
-                                        }
-                                    },
-                                    modifier = Modifier.align(Alignment.End)
-                                ) { Text("ذخیره اطلاعات") }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (entry.dayIndex > 0) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                val previous = rows.firstOrNull { it.dayIndex == entry.dayIndex - 1 }
+                                                if (previous != null) {
+                                                    date = previous.dateText
+                                                    overtime = previous.overtime
+                                                    advance = previous.advance
+                                                    report = previous.report
+                                                    message = "اطلاعات روز قبل کپی شد؛ تاریخ را بررسی و سپس ذخیره کنید."
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) { Text("کپی روز قبل") }
+                                    }
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                val duplicateCount = if (date.isNotBlank()) {
+                                                    dao.countDuplicate(
+                                                        weekKey.value, entry.dayIndex, date,
+                                                        advance, overtime, report
+                                                    )
+                                                } else 0
+                                                if (duplicateCount > 0) {
+                                                    message = "این اطلاعات برای روز دیگری در همین هفته ثبت شده است؛ ثبت تکراری متوقف شد."
+                                                } else {
+                                                    dao.save(DailyEntry(weekKey.value, entry.dayIndex, date, overtime, advance, report))
+                                                    message = "اطلاعات روز ذخیره شد."
+                                                    allWeeks = dao.getWeeks()
+                                                    refresh()
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("ذخیره اطلاعات") }
+                                }
                             }
                         }
                     }
