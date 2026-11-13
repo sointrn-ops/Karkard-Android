@@ -192,12 +192,12 @@ fun KarkardScreen(dao: EntryDao) {
                                 Text(days[entry.dayIndex], fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 OutlinedTextField(date, { date = it }, label = { Text("تاریخ شمسی") },
                                     placeholder = { Text("مثلاً ۱۴۰۵/۰۸/۲۲") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedTextField(overtime, { overtime = it }, label = { Text("اضافه‌کار") },
-                                        modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                                    OutlinedTextField(advance, { advance = it }, label = { Text("مساعده") },
-                                        modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                                }
+                                OutlinedTextField(overtime, { overtime = it }, label = { Text("اضافه‌کار") },
+                                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                                OutlinedTextField(advance, { advance = it }, label = { Text("مساعده") },
+                                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                                 OutlinedTextField(report, { report = it }, label = { Text("گزارشات روز") },
                                     modifier = Modifier.fillMaxWidth(), minLines = 2)
                                 Button(
