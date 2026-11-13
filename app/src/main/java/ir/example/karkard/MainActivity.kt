@@ -86,6 +86,8 @@ private val days = listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌ش
 fun KarkardScreen(dao: EntryDao) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val themePrefs = remember { context.getSharedPreferences("karban_settings", android.content.Context.MODE_PRIVATE) }
+    var isDarkMode by remember { mutableStateOf(themePrefs.getBoolean("dark_mode", false)) }
     val weekKey = remember { mutableStateOf(SimpleDateFormat("yyyy-'W'ww", Locale.US).format(Date())) }
     var rows by remember { mutableStateOf(days.indices.map { DailyEntry(weekKey.value, it) }) }
     var allWeeks by remember { mutableStateOf(emptyList<String>()) }
@@ -161,10 +163,21 @@ fun KarkardScreen(dao: EntryDao) {
         }
     }
 
-    MaterialTheme(colorScheme = lightColorScheme(
-        primary = Color(0xFF23463D), secondary = Color(0xFFB18B55),
-        background = Color(0xFFF5F6F3), surface = Color.White
-    )) {
+    val appColors = if (isDarkMode) darkColorScheme(
+        primary = Color(0xFF8BC7B1),
+        secondary = Color(0xFFE0B96B),
+        background = Color(0xFF101A17),
+        surface = Color(0xFF1B2924),
+        onBackground = Color(0xFFE8EFEA),
+        onSurface = Color(0xFFE8EFEA)
+    ) else lightColorScheme(
+        primary = Color(0xFF23463D),
+        secondary = Color(0xFFB18B55),
+        background = Color(0xFFF5F6F3),
+        surface = Color.White
+    )
+
+    MaterialTheme(colorScheme = appColors) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -173,6 +186,10 @@ fun KarkardScreen(dao: EntryDao) {
                         Text("مدیریت اطلاعات هفتگی", style = MaterialTheme.typography.labelSmall)
                     } },
                     actions = {
+                        TextButton(onClick = {
+                            isDarkMode = !isDarkMode
+                            themePrefs.edit().putBoolean("dark_mode", isDarkMode).apply()
+                        }) { Text(if (isDarkMode) "حالت روز" else "حالت شب") }
                         TextButton(onClick = { showAbout = true }) { Text("درباره برنامه") }
                         TextButton(onClick = { showHistory = !showHistory; refresh() }) { Text("آرشیو") }
                     }
