@@ -30,6 +30,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Calendar
 import java.util.Locale
 
 @Entity(tableName = "daily_entries", primaryKeys = ["weekKey", "dayIndex"])
@@ -155,6 +156,25 @@ private val gold = Color(0xFFC49A58)
 private val ink = Color(0xFF1C2D27)
 private val muted = Color(0xFF718078)
 
+private fun jalaliDate(calendar: Calendar): String {
+ val gy=calendar.get(Calendar.YEAR); val gm=calendar.get(Calendar.MONTH)+1; val gd=calendar.get(Calendar.DAY_OF_MONTH)
+ val md=intArrayOf(0,31,59,90,120,151,181,212,243,273,304,334); val y=gy-1600; val m=gm-1; val d=gd-1
+ var n=365*y+(y+3)/4-(y+99)/100+(y+399)/400+md[m]+d
+ if(m>1 && (gy%4==0 && gy%100!=0 || gy%400==0)) n++
+ var j=n-79; val cycle=j/12053; j%=12053
+ var jy=979+33*cycle+4*(j/1461); j%=1461
+ if(j>=366){jy+=(j-1)/365;j=(j-1)%365}
+ val jm:Int; val jd:Int
+ if(j<186){jm=1+j/31;jd=1+j%31}else{jm=7+(j-186)/30;jd=1+(j-186)%30}
+ return String.format(Locale.US,"%04d/%02d/%02d",jy,jm,jd)
+}
+private fun jalaliWeekStart(offset:Int):Calendar {
+ val c=Calendar.getInstance(); val dow=c.get(Calendar.DAY_OF_WEEK)
+ val afterSaturday=if(dow==Calendar.SATURDAY) 0 else dow
+ c.add(Calendar.DAY_OF_MONTH,-afterSaturday+offset*7); return c
+}
+private fun jalaliWeekKey(offset:Int):String = "J"+jalaliDate(jalaliWeekStart(offset)).replace("/","")
+private fun jalaliDateForDay(offset:Int,index:Int):String { val c=jalaliWeekStart(offset); c.add(Calendar.DAY_OF_MONTH,index); return jalaliDate(c) }
 private fun amountValue(raw: String): Double = raw
     .replace('۰','0').replace('۱','1').replace('۲','2').replace('۳','3').replace('۴','4')
     .replace('۵','5').replace('۶','6').replace('۷','7').replace('۸','8').replace('۹','9')
@@ -169,8 +189,9 @@ private fun KarbanApp(dao: EntryDao) {
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("karban_settings", android.content.Context.MODE_PRIVATE) }
     var dark by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
-    val week = remember { mutableStateOf(SimpleDateFormat("yyyy-'W'ww", Locale.US).format(Date())) }
-    var rows by remember { mutableStateOf(karbanDays.indices.map { DailyEntry(week.value, it) }) }
+    var weekOffset by remember { mutableIntStateOf(0) }
+    val week = remember { mutableStateOf(jalaliWeekKey(0)) }
+    var rows by remember { mutableStateOf(karbanDays.indices.map { DailyEntry(week.value, it, jalaliDateForDay(0, it)) }) }
     var weeks by remember { mutableStateOf(emptyList<String>()) }
     var trash by remember { mutableStateOf(emptyList<DeletedEntry>()) }
     var searchResults by remember { mutableStateOf(emptyList<DailyEntry>()) }
@@ -187,7 +208,7 @@ private fun KarbanApp(dao: EntryDao) {
             loading = true
             try {
                 val saved = dao.getWeek(week.value).associateBy { it.dayIndex }
-                rows = karbanDays.indices.map { saved[it] ?: DailyEntry(week.value, it) }
+                rows = karbanDays.indices.map { saved[it] ?: DailyEntry(week.value, it, jalaliDateForDay(weekOffset, it)) }
                 weeks = dao.getWeeks()
                 trash = dao.getTrash()
             } catch (_: Exception) { notice = "بارگذاری اطلاعات با خطا روبه‌رو شد." }
@@ -313,7 +334,13 @@ private fun KarbanApp(dao: EntryDao) {
                                     Text("برنامه هفتگی", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                     TextButton(onClick = { showArchive = !showArchive; if (showArchive) scope.launch { weeks = dao.getWeeks() } }) { Text(if (showArchive) "بازگشت" else "آرشیو هفته‌ها") }
                                 }
-                                Text("هفته جاری بر اساس تقویم دستگاه", color = muted, style = MaterialTheme.typography.bodySmall)
+                                if (!showArchive) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                        TextButton(onClick = { weekOffset--; week.value = jalaliWeekKey(weekOffset) }) { Text("هفته قبل") }
+                                        Text("شروع هفته: " + jalaliDate(jalaliWeekStart(weekOffset)), color = muted, style = MaterialTheme.typography.bodySmall)
+                                        TextButton(onClick = { weekOffset++; week.value = jalaliWeekKey(weekOffset) }) { Text("هفته بعد") }
+                                    }
+                                }
                                 if (showArchive) {
                                     if (weeks.isEmpty()) Text("هنوز هفته‌ای ذخیره نشده است.")
                                     weeks.forEach { w -> TextButton(onClick = { week.value = w; showArchive = false }) { Text(w) } }
@@ -467,7 +494,7 @@ private fun KarbanApp(dao: EntryDao) {
             title = { Text("درباره KARBAN", fontWeight = FontWeight.Bold) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("سامانه ثبت و مدیریت کارکرد")
-                Text("نسخه 1.1")
+                Text("نسخه 1.2")
                 Text("طراحی و توسعه: محمد جواد احمدی")
                 HorizontalDivider()
                 Text("راه ارتباطی")
