@@ -130,7 +130,7 @@ fun KarkardScreen(dao: EntryDao) {
             val page = pdf.startPage(pageInfo)
             val paint = Paint().apply { textSize = 13f; color = android.graphics.Color.BLACK }
             var y = 48f
-            page.canvas.drawText("Karkard - Work Report", 40f, y, paint); y += 30f
+            page.canvas.drawText("KARBAN - Work Report", 40f, y, paint); y += 30f
             entries.forEach { e ->
                 val line = "${e.weekKey} | ${days.getOrElse(e.dayIndex) { "" }} | Date: ${e.dateText} | OT: ${e.overtime} | Advance: ${e.advance}"
                 page.canvas.drawText(line.take(95), 40f, y, paint); y += 22f
@@ -169,7 +169,7 @@ fun KarkardScreen(dao: EntryDao) {
             topBar = {
                 TopAppBar(
                     title = { Column {
-                        Text("ثبت کارکرد", fontWeight = FontWeight.Bold)
+                        Text("کاربان", fontWeight = FontWeight.Bold)
                         Text("مدیریت اطلاعات هفتگی", style = MaterialTheme.typography.labelSmall)
                     } },
                     actions = {
@@ -267,7 +267,7 @@ fun KarkardScreen(dao: EntryDao) {
                 title = {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("درباره برنامه", fontWeight = FontWeight.Bold)
-                        Text("ثبت کارکرد", style = MaterialTheme.typography.titleMedium,
+                        Text("کاربان", style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary)
                     }
                 },
