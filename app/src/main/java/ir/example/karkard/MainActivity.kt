@@ -104,6 +104,32 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS deleted_entries (weekKey TEXT NOT NULL, dayIndex INTEGER NOT NULL, dateText TEXT NOT NULL, overtime TEXT NOT NULL, advance TEXT NOT NULL, report TEXT NOT NULL, deletedAt INTEGER NOT NULL, PRIMARY KEY(weekKey, dayIndex, deletedAt))")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_advance_records_weekKey_dayIndex ON advance_records(weekKey, dayIndex)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_overtime_records_weekKey_dayIndex ON overtime_records(weekKey, dayIndex)")
+                db.execSQL("""
+                    WITH RECURSIVE split(weekKey, dayIndex, rest, item) AS (
+                        SELECT weekKey, dayIndex, advance || char(10), ''
+                        FROM daily_entries WHERE advance IS NOT NULL AND advance != ''
+                        UNION ALL
+                        SELECT weekKey, dayIndex,
+                               substr(rest, instr(rest, char(10)) + 1),
+                               trim(substr(rest, 1, instr(rest, char(10)) - 1))
+                        FROM split WHERE rest != ''
+                    )
+                    INSERT INTO advance_records(weekKey, dayIndex, amount, note)
+                    SELECT weekKey, dayIndex, item, '' FROM split WHERE item != ''
+                """)
+                db.execSQL("""
+                    WITH RECURSIVE split(weekKey, dayIndex, rest, item) AS (
+                        SELECT weekKey, dayIndex, overtime || char(10), ''
+                        FROM daily_entries WHERE overtime IS NOT NULL AND overtime != ''
+                        UNION ALL
+                        SELECT weekKey, dayIndex,
+                               substr(rest, instr(rest, char(10)) + 1),
+                               trim(substr(rest, 1, instr(rest, char(10)) - 1))
+                        FROM split WHERE rest != ''
+                    )
+                    INSERT INTO overtime_records(weekKey, dayIndex, duration, note)
+                    SELECT weekKey, dayIndex, item, '' FROM split WHERE item != ''
+                """)
             }
         }
         @Volatile private var INSTANCE: AppDatabase? = null
