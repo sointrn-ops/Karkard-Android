@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -389,64 +392,105 @@ private fun KarbanApp(dao: EntryDao) {
                                     if (weeks.isEmpty()) Text("هنوز هفته‌ای ذخیره نشده است.")
                                     weeks.forEach { w -> TextButton(onClick = { week.value = w; showArchive = false }) { Text(w) } }
                                 } else {
-                                    Text("برای هر روز، تاریخ شمسی، مساعده، اضافه‌کاری و گزارش را ثبت کنید.", style = MaterialTheme.typography.bodySmall, color = muted)
+                                    Text("برای هر روز، تاریخ شمسی، مساعده، اضافه‌کاری و گزارش را ثبت کنید.", style = Materi                    if (!showArchive) {
+                        item {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("جدول ثبت کارکرد هفتگی", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                    Text("برای دیدن همه ستون‌ها، جدول را افقی جابه‌جا کنید.", color = muted, style = MaterialTheme.typography.bodySmall)
+                                    Row(
+                                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                                    ) {
+                                        Row(
+                                            Modifier.width(810.dp).background(forest, RoundedCornerShape(10.dp)).padding(vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            listOf("تاریخ", "روز", "اضافه‌کار", "مساعده", "گزارشات").forEachIndexed { index, title ->
+                                                Text(
+                                                    title, color = Color.White, fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.width(listOf(130, 100, 170, 170, 240)[index]).padding(horizontal = 8.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        items(rows, key = { it.dayIndex }) { entry ->
+                            var date by remember(entry.weekKey, entry.dayIndex, entry.dateText) { mutableStateOf(entry.dateText.ifBlank { jalaliDateForDay(entry.weekKey, entry.dayIndex) }) }
+                            var ot by remember(entry.weekKey, entry.dayIndex, entry.overtime) { mutableStateOf(entry.overtime) }
+                            var adv by remember(entry.weekKey, entry.dayIndex, entry.advance) { mutableStateOf(entry.advance) }
+                            var report by remember(entry.weekKey, entry.dayIndex, entry.report) { mutableStateOf(entry.report) }
+                            var confirmDelete by remember { mutableStateOf(false) }
+                            Card(shape = RoundedCornerShape(14.dp), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+                                Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                                            Row(Modifier.width(810.dp), verticalAlignment = Alignment.Top) {
+                                                OutlinedTextField(
+                                                    date, { date = it }, label = { Text("تاریخ شمسی") },
+                                                    placeholder = { Text("۱۴۰۵/۰۸/۲۲") }, modifier = Modifier.width(130.dp),
+                                                    singleLine = true, shape = RoundedCornerShape(10.dp)
+                                                )
+                                                Column(Modifier.width(100.dp).padding(horizontal = 5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    Surface(color = leaf, shape = RoundedCornerShape(10.dp)) {
+                                                        Text(karbanDays[entry.dayIndex], color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp), fontWeight = FontWeight.Bold)
+                                                    }
+                                                    Text(if (entry.dateText.isNotBlank() || entry.report.isNotBlank() || entry.advance.isNotBlank() || entry.overtime.isNotBlank()) "ثبت‌شده" else "جدید", color = muted, style = MaterialTheme.typography.labelSmall)
+                                                }
+                                                OutlinedTextField(
+                                                    ot, { ot = it }, label = { Text("اضافه‌کار") },
+                                                    modifier = Modifier.width(170.dp), minLines = 2, shape = RoundedCornerShape(10.dp)
+                                                )
+                                                OutlinedTextField(
+                                                    adv, { adv = it }, label = { Text("مساعده") },
+                                                    modifier = Modifier.width(170.dp), minLines = 2, shape = RoundedCornerShape(10.dp)
+                                                )
+                                                OutlinedTextField(
+                                                    report, { report = it }, label = { Text("گزارشات روز") },
+                                                    modifier = Modifier.width(240.dp), minLines = 2, shape = RoundedCornerShape(10.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        if (entry.dayIndex > 0) OutlinedButton(onClick = {
+                                            val prev = rows.firstOrNull { it.dayIndex == entry.dayIndex - 1 }
+                                            if (prev != null) { adv = prev.advance; ot = prev.overtime; report = prev.report; notice = "اطلاعات روز قبل کپی شد؛ تاریخ را جداگانه اصلاح کنید." }
+                                        }, modifier = Modifier.weight(1f)) { Text("کپی روز قبل") }
+                                        Button(onClick = {
+                                            scope.launch {
+                                                if (date.isBlank() && (adv.isNotBlank() || ot.isNotBlank() || report.isNotBlank())) {
+                                                    notice = "برای ذخیره این روز، ابتدا تاریخ شمسی را وارد کنید."
+                                                } else {
+                                                    val duplicate = if (date.isNotBlank()) dao.countDuplicate(week.value, entry.dayIndex, date, adv, ot, report) else 0
+                                                    if (duplicate > 0) notice = "اطلاعات مشابه برای روز دیگری ثبت شده است."
+                                                    else {
+                                                        dao.saveDay(DailyEntry(week.value, entry.dayIndex, date, ot, adv, report))
+                                                        notice = "اطلاعات ${karbanDays[entry.dayIndex]} ذخیره شد."
+                                                        refresh()
+                                                    }
+                                                }
+                                            }
+                                        }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) { Text("ذخیره ردیف") }
+                                    }
+                                    if (entry.dateText.isNotBlank() || entry.report.isNotBlank() || entry.advance.isNotBlank() || entry.overtime.isNotBlank()) {
+                                        TextButton(onClick = { confirmDelete = true }, modifier = Modifier.align(Alignment.End)) { Text("انتقال به بازیافت", color = MaterialTheme.colorScheme.error) }
+                                    }
+                                    if (confirmDelete) AlertDialog(
+                                        onDismissRequest = { confirmDelete = false },
+                                        title = { Text("انتقال اطلاعات به بازیافت؟") },
+                                        text = { Text("این روز حذف دائمی نمی‌شود و از بخش بازیافت قابل بازگردانی است.") },
+                                        confirmButton = { TextButton(onClick = {
+                                            scope.launch { dao.moveToTrash(entry.copy(dateText = date, overtime = ot, advance = adv, report = report), System.currentTimeMillis()); confirmDelete = false; notice = "اطلاعات به بازیافت منتقل شد."; refresh() }
+                                        }) { Text("انتقال") } },
+                                        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("انصراف") } }
+                                    )
                                 }
                             }
                         }
                     }
-                    if (!showArchive) items(rows, key = { it.dayIndex }) { entry ->
-                        var date by remember(entry.weekKey, entry.dayIndex, entry.dateText) { mutableStateOf(entry.dateText.ifBlank { jalaliDateForDay(entry.weekKey, entry.dayIndex) }) }
-                        var ot by remember(entry.weekKey, entry.dayIndex, entry.overtime) { mutableStateOf(entry.overtime) }
-                        var adv by remember(entry.weekKey, entry.dayIndex, entry.advance) { mutableStateOf(entry.advance) }
-                        var report by remember(entry.weekKey, entry.dayIndex, entry.report) { mutableStateOf(entry.report) }
-                        var confirmDelete by remember { mutableStateOf(false) }
-                        Card(shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
-                            Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(color = leaf, shape = RoundedCornerShape(12.dp)) {
-                                        Text("${entry.dayIndex + 1}", color = Color.White, modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp), fontWeight = FontWeight.Bold)
-                                    }
-                                    Text(karbanDays[entry.dayIndex], fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(start = 10.dp))
-                                    if (entry.dateText.isNotBlank() || entry.report.isNotBlank() || entry.advance.isNotBlank() || entry.overtime.isNotBlank()) {
-                                        Text("ثبت‌شده", color = leaf, style = MaterialTheme.typography.labelSmall)
-                                    } else Text("جدید", color = muted, style = MaterialTheme.typography.labelSmall)
-                                }
-                                OutlinedTextField(date, { date = it }, label = { Text("تاریخ شمسی") }, placeholder = { Text("۱۴۰۵/۰۸/۲۲") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(14.dp))
-                                OutlinedTextField(adv, { adv = it }, label = { Text("مساعده — هر مورد در یک خط") }, modifier = Modifier.fillMaxWidth(), minLines = 2, shape = RoundedCornerShape(14.dp))
-                                OutlinedTextField(ot, { ot = it }, label = { Text("اضافه‌کاری — هر نوبت در یک خط") }, modifier = Modifier.fillMaxWidth(), minLines = 2, shape = RoundedCornerShape(14.dp))
-                                OutlinedTextField(report, { report = it }, label = { Text("گزارش روزانه") }, modifier = Modifier.fillMaxWidth(), minLines = 2, shape = RoundedCornerShape(14.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    if (entry.dayIndex > 0) OutlinedButton(onClick = {
-                                        val prev = rows.firstOrNull { it.dayIndex == entry.dayIndex - 1 }
-                                        if (prev != null) { adv = prev.advance; ot = prev.overtime; report = prev.report; notice = "اطلاعات روز قبل کپی شد؛ تاریخ را جداگانه اصلاح کنید." }
-                                    }, modifier = Modifier.weight(1f)) { Text("کپی روز قبل") }
-                                    Button(onClick = {
-                                        scope.launch {
-                                            if (date.isBlank() && (adv.isNotBlank() || ot.isNotBlank() || report.isNotBlank())) {
-                                                notice = "برای ذخیره این روز، ابتدا تاریخ شمسی را وارد کنید."
-                                            } else {
-                                                val duplicate = if (date.isNotBlank()) dao.countDuplicate(week.value, entry.dayIndex, date, adv, ot, report) else 0
-                                                if (duplicate > 0) notice = "اطلاعات مشابه برای روز دیگری ثبت شده است."
-                                                else {
-                                                    dao.saveDay(DailyEntry(week.value, entry.dayIndex, date, ot, adv, report))
-                                                    notice = "اطلاعات ${karbanDays[entry.dayIndex]} ذخیره شد."
-                                                    refresh()
-                                                }
-                                            }
-                                        }
-                                    }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) { Text("ذخیره") }
-                                }
-                                if (entry.dateText.isNotBlank() || entry.report.isNotBlank() || entry.advance.isNotBlank() || entry.overtime.isNotBlank()) {
-                                    TextButton(onClick = { confirmDelete = true }, modifier = Modifier.align(Alignment.End)) { Text("انتقال به بازیافت", color = MaterialTheme.colorScheme.error) }
-                                }
-                                if (confirmDelete) AlertDialog(
-                                    onDismissRequest = { confirmDelete = false },
-                                    title = { Text("انتقال اطلاعات به بازیافت؟") },
-                                    text = { Text("این روز حذف دائمی نمی‌شود و از بخش بازیافت قابل بازگردانی است.") },
-                                    confirmButton = { TextButton(onClick = {
-                                        scope.launch { dao.moveToTrash(entry.copy(dateText = date, overtime = ot, advance = adv, report = report), System.currentTimeMillis()); confirmDelete = false; notice = "اطلاعات به بازیافت منتقل شد."; refresh() }
-                                    }) { Text("انتقال") } },
-                                    dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("انصراف") } }
+onfirmDelete = false }) { Text("انصراف") } }
                                 )
                             }
                         }
