@@ -191,7 +191,7 @@ private fun KarbanApp(dao: EntryDao) {
     var dark by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
     var weekOffset by remember { mutableIntStateOf(0) }
     val week = remember { mutableStateOf(jalaliWeekKey(0)) }
-    var rows by remember { mutableStateOf(karbanDays.indices.map { DailyEntry(week.value, it, jalaliDateForDay(0, it)) }) }
+    var rows by remember { mutableStateOf(karbanDays.indices.map { DailyEntry(week.value, it) }) }
     var weeks by remember { mutableStateOf(emptyList<String>()) }
     var trash by remember { mutableStateOf(emptyList<DeletedEntry>()) }
     var searchResults by remember { mutableStateOf(emptyList<DailyEntry>()) }
@@ -208,7 +208,7 @@ private fun KarbanApp(dao: EntryDao) {
             loading = true
             try {
                 val saved = dao.getWeek(week.value).associateBy { it.dayIndex }
-                rows = karbanDays.indices.map { saved[it] ?: DailyEntry(week.value, it, jalaliDateForDay(weekOffset, it)) }
+                rows = karbanDays.indices.map { saved[it] ?: DailyEntry(week.value, it) }
                 weeks = dao.getWeeks()
                 trash = dao.getTrash()
             } catch (_: Exception) { notice = "بارگذاری اطلاعات با خطا روبه‌رو شد." }
@@ -351,7 +351,7 @@ private fun KarbanApp(dao: EntryDao) {
                         }
                     }
                     if (!showArchive) items(rows, key = { it.dayIndex }) { entry ->
-                        var date by remember(entry.weekKey, entry.dayIndex, entry.dateText) { mutableStateOf(entry.dateText) }
+                        var date by remember(entry.weekKey, entry.dayIndex, entry.dateText) { mutableStateOf(entry.dateText.ifBlank { jalaliDateForDay(weekOffset, entry.dayIndex) }) }
                         var ot by remember(entry.weekKey, entry.dayIndex, entry.overtime) { mutableStateOf(entry.overtime) }
                         var adv by remember(entry.weekKey, entry.dayIndex, entry.advance) { mutableStateOf(entry.advance) }
                         var report by remember(entry.weekKey, entry.dayIndex, entry.report) { mutableStateOf(entry.report) }
