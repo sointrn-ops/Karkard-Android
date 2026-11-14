@@ -1,5 +1,8 @@
 package ir.example.karkard
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -8,11 +11,17 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import android.util.AtomicFile
+import org.json.JSONObject
 import java.io.File
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var recordsFile: AtomicFile
+
+    companion object {
+        private const val REQUEST_EXPORT_BACKUP = 7101
+        private const val REQUEST_IMPORT_BACKUP = 7102
+    }
 
     inner class KarbanStorage {
         @JavascriptInterface
@@ -42,7 +51,34 @@ class MainActivity : ComponentActivity() {
                 false
             }
         }
+
+        @JavascriptInterface
+        fun exportBackup(json: String) {
+            if (json.length > 10_000_000) return
+            runOnUiThread {
+                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/json"
+                    putExtra(Intent.EXTRA_TITLE, "KARBAN-backup.json")
+                }
+                pendingBackupJson = json
+                startActivityForResult(intent, REQUEST_EXPORT_BACKUP)
+            }
+        }
+
+        @JavascriptInterface
+        fun importBackup() {
+            runOnUiThread {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/json"
+                }
+                startActivityForResult(intent, REQUEST_IMPORT_BACKUP)
+            }
+        }
     }
+
+    private var pendingBackupJson: String? = null
 
     @Suppress("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,6 +104,42 @@ class MainActivity : ComponentActivity() {
                 if (webView.canGoBack()) webView.goBack() else finish()
             }
         })
+    }
+
+    @Deprecated("Deprecated in Android API  Activity result flow retained for broad device compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != Activity.RESULT_OK || data?.data == null) {
+            pendingBackupJson = null
+            return
+        }
+
+        val uri: Uri = data.data!!
+        when (requestCode) {
+            REQUEST_EXPORT_BACKUP -> {
+                val json = pendingBackupJson ?: return
+                try {
+                    contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: throw IllegalStateException("Unable to open backup destination")
+                    webView.evaluateJavascript("window.onNativeBackupExported(true)", null)
+                } catch (_: Exception) {
+                    webView.evaluateJavascript("window.onNativeBackupExported(false)", null)
+                } finally {
+                    pendingBackupJson = null
+                }
+            }
+            REQUEST_IMPORT_BACKUP -> {
+                try {
+                    val json = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                        ?: throw IllegalStateException("Unable to read backup")
+                    val quoted = JSONObject.quote(json)
+                    webView.evaluateJavascript("window.importBackupFromNative($quoted)", null)
+                } catch (_: Exception) {
+                    webView.evaluateJavascript("window.onNativeBackupImported(false)", null)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
