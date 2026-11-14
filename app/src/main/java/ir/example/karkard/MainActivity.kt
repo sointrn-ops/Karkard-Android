@@ -17,6 +17,7 @@ import androidx.activity.OnBackPressedCallback
 import android.util.AtomicFile
 import org.json.JSONObject
 import java.io.File
+import java.io.FileNotFoundException
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
         private const val KEY_ALIAS = "karban_records_key_v1"
         private const val ENCRYPTED_PREFIX = "KARBAN1:"
         private const val MAX_JSON_CHARS = 10_000_000
+        private const val STORAGE_ERROR = "__KARBAN_STORAGE_ERROR__"
     }
 
     inner class KarbanStorage {
@@ -46,12 +48,14 @@ class MainActivity : ComponentActivity() {
                     decryptRecords(stored.removePrefix(ENCRYPTED_PREFIX))
                 } else {
                     // Upgrade older plaintext app-private data to encrypted storage.
-                    if (stored.isNotEmpty() && !saveRecords(stored)) return ""
+                    if (stored.isNotEmpty() && !saveRecords(stored)) return STORAGE_ERROR
                     stored
                 }
+            } catch (_: FileNotFoundException) {
+                ""
             } catch (error: Exception) {
                 android.util.Log.e("KARBAN", "Could not read encrypted records", error)
-                ""
+                STORAGE_ERROR
             }
         }
 
