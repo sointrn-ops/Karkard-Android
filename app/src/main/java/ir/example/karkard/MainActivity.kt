@@ -31,14 +31,18 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun saveRecords(json: String): Boolean {
             if (json.length > 10_000_000) return false
-            var stream: java.io.FileOutputStream? = null
+            val stream = try {
+                recordsFile.startWrite()
+            } catch (_: Exception) {
+                return false
+            }
+
             return try {
-                stream = recordsFile.startWrite()
                 stream.write(json.toByteArray(Charsets.UTF_8))
                 recordsFile.finishWrite(stream)
                 true
             } catch (_: Exception) {
-                if (stream != null) recordsFile.failWrite(stream)
+                recordsFile.failWrite(stream)
                 false
             }
         }
