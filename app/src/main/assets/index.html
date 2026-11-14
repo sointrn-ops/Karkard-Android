@@ -3,47 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'>
     <title>KARBAN</title>
     <link rel="stylesheet" href="style.css">
 
-    <style>
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .about-btn {
-            background: var(--surface2);
-            color: var(--text);
-            border: 1px solid var(--border);
-            padding: 10px 17px;
-            border-radius: 12px;
-            font-family: inherit;
-            font-size: 13px;
-            cursor: pointer;
-            transition: .2s;
-            white-space: nowrap;
-        }
-
-        .about-btn:hover {
-            background: var(--green);
-            color: #06150d;
-            border-color: var(--green);
-        }
-
-        @media (max-width: 420px) {
-            .about-btn {
-                padding: 9px 11px;
-                font-size: 12px;
-            }
-
-            .header-actions {
-                gap: 6px;
-            }
-        }
-    </style>
 </head>
 <body>
 
@@ -60,7 +24,7 @@
 
         <div class="header-actions">
             <button class="about-btn" type="button"
-                    onclick="openPage('about')">
+                    id="aboutBtn">
                 درباره ما
             </button>
 
@@ -234,8 +198,8 @@
                 <h3>پشتیبان‌گیری و بازیابی</h3>
                 <p>برای جلوگیری از ازدست‌رفتن سوابق، هر چند وقت یک‌بار نسخه پشتیبان بگیرید. فایل پشتیبان رمزنگاری نشده است؛ آن را در محل امن نگهداری کنید.</p>
                 <div class="backup-actions">
-                    <button type="button" class="secondary" onclick="exportBackup()">دریافت فایل پشتیبان</button>
-                    <button type="button" class="secondary" onclick="importBackup()">بازیابی از فایل</button>
+                    <button type="button" class="secondary" id="exportBackupBtn">دریافت فایل پشتیبان</button>
+                    <button type="button" class="secondary" id="importBackupBtn">بازیابی از فایل</button>
                 </div>
 
                 <hr>
