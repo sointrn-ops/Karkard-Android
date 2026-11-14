@@ -1,0 +1,1081 @@
+:root {
+    --bg: #07110e;
+    --surface: #101c17;
+    --surface2: #17251e;
+    --border: #26382e;
+    --green: #31c47b;
+    --green2: #62dfa0;
+    --text: #f1f7f3;
+    --muted: #91a399;
+    --danger: #ed6262;
+    --shadow: 0 12px 35px rgba(0,0,0,.2);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Tahoma, Arial, sans-serif;
+    direction: rtl;
+    min-height: 100vh;
+    transition: .3s;
+}
+
+button, input, textarea {
+    font-family: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+}
+
+button:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+/* ساختار اصلی */
+
+.app-shell {
+    width: 100%;
+    max-width: 1050px;
+    min-height: 100vh;
+    margin: auto;
+    padding: 22px 22px 110px;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 35px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    background: linear-gradient(135deg,var(--green),#138b54);
+    color: #06150d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.brand-logo.large {
+    width: 75px;
+    height: 75px;
+    font-size: 38px;
+    margin: 0 auto 18px;
+}
+
+.brand h1 {
+    font-size: 20px;
+    letter-spacing: 2px;
+}
+
+.brand span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 6px;
+}
+
+/* دکمه‌های بالای صفحه */
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 19px;
+    transition: .2s;
+}
+
+.icon-btn:hover {
+    border-color: var(--green);
+}
+
+#aboutBtn {
+    font-size: 21px;
+    font-weight: bold;
+    color: var(--green2);
+}
+
+#aboutBtn:hover {
+    background: var(--surface2);
+    border-color: var(--green);
+    transform: translateY(-2px);
+}
+
+.content {
+    width: 100%;
+}
+
+.page {
+    display: none;
+    animation: fadeIn .25s ease;
+}
+
+.page.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* عنوان صفحات */
+
+.sub-title {
+    display: block;
+    color: var(--green2);
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.section-heading {
+    margin-bottom: 25px;
+}
+
+.section-heading h2,
+.greeting h2 {
+    font-size: 24px;
+    margin-bottom: 9px;
+}
+
+.section-heading p,
+.greeting p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 2;
+}
+
+.greeting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.today-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--green2);
+    padding: 10px 13px;
+    border-radius: 12px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* خانه */
+
+#home {
+    max-width: 850px;
+    margin: 0 auto;
+}
+
+#home .greeting {
+    margin-bottom: 28px;
+}
+
+#home .greeting h2 {
+    font-size: 27px;
+    letter-spacing: -.5px;
+}
+
+#home .greeting p {
+    font-size: 12px;
+}
+
+#home .today-badge {
+    padding: 12px 16px;
+    border-radius: 13px;
+    font-weight: bold;
+}
+
+#home .summary-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 175px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    background:
+        radial-gradient(circle at 10% 10%,rgba(98,223,160,.15),transparent 35%),
+        linear-gradient(125deg,#123d2a,#10251b);
+    border: 1px solid #28583e;
+    border-radius: 23px;
+    padding: 27px 30px;
+    margin-bottom: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,.15);
+}
+
+#home .summary-card::after {
+    content: "";
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    border: 1px solid rgba(98,223,160,.12);
+    border-radius: 50%;
+    left: -65px;
+    bottom: -110px;
+    box-shadow: 0 0 0 20px rgba(98,223,160,.025),
+                0 0 0 40px rgba(98,223,160,.02);
+    pointer-events: none;
+}
+
+#home .summary-card span {
+    color: #b2d8c1;
+    font-size: 12px;
+}
+
+#home .summary-card h2 {
+    color: var(--green2);
+    font-size: clamp(25px,4vw,34px);
+    margin: 13px 0;
+    overflow-wrap: anywhere;
+    direction: rtl;
+}
+
+#home .summary-card small {
+    color: #b2d8c1;
+    font-size: 10px;
+}
+
+#home .summary-icon {
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+    border-radius: 18px;
+    background: rgba(98,223,160,.13);
+    border: 1px solid rgba(98,223,160,.12);
+    color: var(--green2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 29px;
+}
+
+#home .mini-stats {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 16px;
+    margin-bottom: 34px;
+}
+
+#home .mini-card {
+    position: relative;
+    min-height: 145px;
+    background: linear-gradient(145deg,var(--surface),var(--surface2));
+    border: 1px solid var(--border);
+    border-radius: 19px;
+    padding: 20px;
+    transition: transform .2s,border-color .2s;
+}
+
+#home .mini-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(98,223,160,.4);
+}
+
+#home .stat-icon {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: rgba(49,196,123,.11);
+    color: var(--green2);
+    font-size: 18px;
+    margin-bottom: 14px;
+}
+
+#home .mini-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 10px;
+}
+
+#home .mini-card strong {
+    display: block;
+    color: var(--green2);
+    font-size: 25px;
+    margin-bottom: 7px;
+}
+
+#home .mini-card small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+#home .section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 17px;
+}
+
+#home .section-title h3 {
+    font-size: 15px;
+}
+
+#home .section-title .sub-title {
+    margin-bottom: 7px;
+}
+
+#home .text-btn {
+    color: var(--green2);
+    font-size: 11px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    transition: .2s;
+}
+
+#home .text-btn:hover {
+    background: rgba(49,196,123,.1);
+}
+
+#home .record-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* خانه در حالت روشن */
+
+.light-theme #home .summary-card {
+    background: linear-gradient(125deg,#d7f3e2,#eaf8ef);
+    border-color: #b6dfc6;
+}
+
+.light-theme #home .summary-card span,
+.light-theme #home .summary-card small {
+    color: #376c4e;
+}
+
+.light-theme #home .summary-card h2 {
+    color: #13854c;
+}
+
+.light-theme #home .summary-icon {
+    background: rgba(33,169,103,.12);
+    color: #168c55;
+}
+
+/* عنوان بخش */
+
+.section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 28px 0 16px;
+}
+
+.section-title h3 {
+    font-size: 14px;
+}
+
+.text-btn {
+    background: transparent;
+    color: var(--green2);
+    font-size: 11px;
+    padding: 7px;
+}
+
+/* دکمه‌ها */
+
+.primary, .secondary, .danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 11px;
+    padding: 12px 17px;
+    font-size: 12px;
+    font-weight: bold;
+    transition: .2s;
+}
+
+.primary {
+    background: var(--green);
+    color: #06150d;
+}
+
+.primary:hover {
+    background: var(--green2);
+}
+
+.secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.secondary:hover {
+    border-color: var(--green);
+}
+
+.danger {
+    background: rgba(237,98,98,.12);
+    color: var(--danger);
+    border: 1px solid rgba(237,98,98,.2);
+}
+
+.small {
+    padding: 8px 12px;
+    font-size: 11px;
+}
+
+.save-btn {
+    width: 100%;
+    margin-top: 22px;
+    padding: 15px;
+}
+
+/* پنل‌ها */
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 18px;
+}
+
+/* سوابق */
+
+.record-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.record-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 17px;
+}
+
+.record-card-heading {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--green2);
+    margin-bottom: 13px;
+}
+
+.record-details {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+}
+
+.record-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.record-actions button {
+    flex: 1;
+}
+
+/* فرم ثبت کارکرد */
+
+#recordForm > label {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin: 17px 0 9px;
+}
+
+#recordForm > label:first-child {
+    margin-top: 0;
+}
+
+.date-field {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 22px;
+}
+
+.date-field input {
+    flex: 1;
+    min-width: 0;
+}
+
+input, textarea {
+    outline: none;
+}
+
+#date, .search-input, #report, .dynamic-row input {
+    width: 100%;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 13px;
+    font-size: 12px;
+}
+
+#date {
+    cursor: pointer;
+}
+
+#report {
+    min-height: 110px;
+    resize: vertical;
+    line-height: 1.9;
+}
+
+#date:focus, .search-input:focus, #report:focus,
+.dynamic-row input:focus {
+    border-color: var(--green);
+}
+
+.field-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 22px 0 12px;
+}
+
+.field-heading label {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.dynamic-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.dynamic-row input {
+    min-width: 0;
+    flex: 1;
+}
+
+.remove-row {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: rgba(237,98,98,.12);
+    color: var(--danger);
+    font-size: 20px;
+}
+
+/* تقویم هفتگی */
+
+.week-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 22px;
+}
+
+.week-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.week-header strong {
+    font-size: 13px;
+}
+
+.week-days {
+    display: grid;
+    grid-template-columns: repeat(7,minmax(0,1fr));
+    gap: 7px;
+}
+
+.week-day {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+}
+
+.week-day span {
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.week-day strong {
+    font-size: 14px;
+}
+
+.week-day.selected {
+    background: var(--green);
+    border-color: var(--green);
+    color: #06150d;
+}
+
+.week-day.selected span {
+    color: #16462e;
+}
+
+.week-day.has-record {
+    border-color: var(--green);
+}
+
+/* جست‌وجو */
+
+.search-input {
+    margin-bottom: 18px;
+    padding: 15px;
+}
+
+/* گزارش‌ها */
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 13px;
+}
+
+.report-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 19px;
+    min-width: 0;
+}
+
+.report-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.8;
+    margin-bottom: 13px;
+}
+
+.report-card strong {
+    display: block;
+    font-size: 21px;
+    color: var(--green2);
+    overflow-wrap: anywhere;
+}
+
+/* درباره برنامه */
+
+.about-card {
+    text-align: center;
+    padding: 30px 22px;
+}
+
+.about-card h2 {
+    font-size: 23px;
+    margin-bottom: 8px;
+}
+
+.about-card h3 {
+    margin: 17px 0 10px;
+    font-size: 14px;
+}
+
+.about-card p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 2.2;
+    overflow-wrap: anywhere;
+}
+
+.about-card hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+.about-card a {
+    color: var(--green2);
+    text-decoration: none;
+}
+
+.about-card small {
+    display: block;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 2;
+}
+
+/* نوار پایین */
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    background: rgba(7,17,14,.95);
+    backdrop-filter: blur(15px);
+    border-top: 1px solid var(--border);
+    padding: 10px 8px;
+    padding-bottom: max(10px,env(safe-area-inset-bottom));
+}
+
+.bottom-nav .nav-item {
+    flex: 1;
+    max-width: 130px;
+    background: transparent;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 4px;
+    border-radius: 12px;
+}
+
+.nav-item span {
+    font-size: 21px;
+    line-height: 1;
+}
+
+.nav-item small {
+    font-size: 10px;
+}
+
+.nav-item.active {
+    color: var(--green2);
+    background: rgba(49,196,123,.08);
+}
+
+.nav-item.add-nav span {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: var(--green);
+    color: #06150d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* تقویم انتخاب تاریخ */
+
+.calendar-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.72);
+    padding: 15px;
+}
+
+.calendar-modal.show {
+    display: flex;
+}
+
+.calendar-box {
+    width: 100%;
+    max-width: 390px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.calendar-header strong {
+    font-size: 13px;
+    text-align: center;
+}
+
+.calendar-header button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 10px;
+    font-size: 10px;
+}
+
+.calendar-header button:disabled {
+    opacity: .3;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7,minmax(0,1fr));
+    gap: 6px;
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.calendar-weekday {
+    color: var(--muted);
+    font-size: 10px;
+    padding: 8px 0;
+}
+
+.calendar-empty {
+    min-height: 38px;
+}
+
+.calendar-day {
+    min-width: 0;
+    height: 39px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-size: 12px;
+}
+
+.calendar-day:hover {
+    background: var(--surface2);
+}
+
+.calendar-day.selected {
+    background: var(--green);
+    color: #06150d;
+    font-weight: bold;
+}
+
+.calendar-day.today {
+    border: 1px solid var(--green);
+}
+
+#closeCalendar {
+    width: 100%;
+}
+
+/* حالت روشن */
+
+.light-theme {
+    --bg: #f2f6f3;
+    --surface: #fff;
+    --surface2: #edf3ef;
+    --border: #dce7df;
+    --green: #21a967;
+    --green2: #168c55;
+    --text: #17251d;
+    --muted: #738278;
+    --shadow: 0 10px 30px rgba(0,0,0,.05);
+}
+
+.light-theme .bottom-nav {
+    background: rgba(255,255,255,.95);
+}
+
+/* نمایشگرهای کوچک */
+
+@media (max-width:600px) {
+    .app-shell {
+        padding: 16px 16px 105px;
+    }
+
+    .app-header {
+        margin-bottom: 28px;
+    }
+
+    .brand h1 {
+        font-size: 18px;
+    }
+
+    .greeting h2, .section-heading h2 {
+        font-size: 21px;
+    }
+
+    #home .greeting h2 {
+        font-size: 23px;
+    }
+
+    #home .summary-card {
+        min-height: 155px;
+        padding: 20px;
+    }
+
+    #home .mini-card {
+        padding: 15px;
+        min-height: 140px;
+    }
+
+    #home .mini-card strong {
+        font-size: 22px;
+    }
+
+    .week-card {
+        padding: 12px;
+    }
+
+    .week-days {
+        gap: 4px;
+    }
+
+    .week-day {
+        padding: 10px 1px;
+        gap: 10px;
+    }
+
+    .week-day span {
+        font-size: 8px;
+    }
+
+    .week-day strong {
+        font-size: 12px;
+    }
+
+    .panel {
+        padding: 16px;
+    }
+
+    .date-field {
+        flex-direction: column;
+    }
+
+    .date-field button {
+        width: 100%;
+    }
+
+    .report-card {
+        padding: 15px;
+    }
+
+    .report-card strong {
+        font-size: 18px;
+    }
+}
+
+@media (max-width:360px) {
+    .app-shell {
+        padding-right: 11px;
+        padding-left: 11px;
+    }
+
+    .week-days {
+        gap: 3px;
+    }
+
+    .week-day span {
+        font-size: 7px;
+    }
+
+    .nav-item small {
+        font-size: 9px;
+    }
+
+    #home .mini-stats {
+        gap: 9px;
+    }
+
+    #home .mini-card {
+        padding: 12px;
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+
+    .icon-btn {
+        width: 39px;
+        height: 39px;
+    }
+}
+
+/* دکمه درباره ما در هدر */
+
+.about-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    color: var(--green2);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 0 16px;
+    height: 42px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    transition: .2s;
+}
+
+.about-btn:hover {
+    background: var(--surface2);
+    border-color: var(--green);
+    transform: translateY(-2px);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+@media (max-width: 420px) {
+    .about-btn {
+        padding: 0 11px;
+        font-size: 11px;
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+}
