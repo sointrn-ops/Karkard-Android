@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -206,6 +207,8 @@ private fun KarbanApp(
     var overtimes by remember { mutableStateOf(listOf(WorkItem("", 0.0))) }
     var report by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
+    var archiveMonth by remember { mutableIntStateOf(0) }
+    var archiveYear by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf(if (storageHealthy) "" else "خواندن اطلاعات قبلی ممکن نشد. برای محافظت از سوابق، ذخیره‌سازی غیرفعال شده است. برنامه را حذف نکنید و فایل پشتیبان سالم را بازیابی کنید.") }
     var weekOffset by remember { mutableIntStateOf(0) }
     var deleteTarget by remember { mutableStateOf<WorkRecord?>(null) }
@@ -566,11 +569,101 @@ private fun KarbanApp(
                         }
                     }
                     "records" -> {
-                        Heading("سوابق کارکرد", "جست‌وجو، ویرایش و حذف اطلاعات", foreground, secondary)
-                        OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("جست‌وجو در تاریخ و گزارش...") })
-                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(records.sortedByDescending { it.date }.filter { persianDate(it.date).contains(search) || it.date.contains(search) || it.report.contains(search) }, key = { it.id }) { record ->
-                                RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
+                        val monthNames = listOf("همه ماه‌ها", "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
+                        val availableYears = (records.map { jalaliParts(LocalDate.parse(it.date)).first } + 1405 + jalaliParts(LocalDate.now()).first).filter { it >= 1405 }.distinct().sortedDescending()
+                        val filteredRecords = records.sortedByDescending { it.date }.filter { record ->
+                            val parts = jalaliParts(LocalDate.parse(record.date))
+                            (archiveMonth == 0 || parts.second == archiveMonth) &&
+                            (archiveYear == 0 || parts.first == archiveYear) &&
+                            (search.isBlank() || persianDate(record.date).contains(search.trim()) || record.date.contains(search.trim()) || record.report.contains(search.trim(), ignoreCase = true) ||
+                                record.advances.any { it.title.contains(search.trim(), ignoreCase = true) } ||
+                                record.overtimes.any { it.title.contains(search.trim(), ignoreCase = true) })
+                        }
+                        val monthGroups = filteredRecords.map {
+                            val p = jalaliParts(LocalDate.parse(it.date))
+                            "${p.first}-${p.second}"
+                        }.distinct().size
+                        var monthMenuOpen by remember { mutableStateOf(false) }
+                        var yearMenuOpen by remember { mutableStateOf(false) }
+
+                        Heading("آرشیو سوابق", "جست‌وجو و مدیریت کارکردهای ثبت‌شده", foreground, secondary)
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
+                                Text("کل سوابق", color = secondary, fontSize = 10.sp)
+                                Text(records.size.toString(), color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                            }
+                            Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
+                                Text("نتیجه فیلتر", color = secondary, fontSize = 10.sp)
+                                Text(filteredRecords.size.toString(), color = AccentBright, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                            }
+                            Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
+                                Text("ماه‌های دارای سابقه", color = secondary, fontSize = 10.sp)
+                                Text(monthGroups.toString(), color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = search,
+                            onValueChange = { search = it },
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                            singleLine = true,
+                            leadingIcon = { Text("⌕", fontSize = 20.sp) },
+                            placeholder = { Text("جست‌وجو در تاریخ، گزارش یا عنوان...") }
+                        )
+
+                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(Modifier.weight(1f)) {
+                                OutlinedButton(onClick = { monthMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(monthNames[archiveMonth], maxLines = 1, color = foreground)
+                                }
+                                DropdownMenu(expanded = monthMenuOpen, onDismissRequest = { monthMenuOpen = false }) {
+                                    monthNames.forEachIndexed { index, name ->
+                                        DropdownMenuItem(text = { Text(name) }, onClick = { archiveMonth = index; monthMenuOpen = false })
+                                    }
+                                }
+                            }
+                            Box(Modifier.weight(1f)) {
+                                OutlinedButton(onClick = { yearMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(if (archiveYear == 0) "همه سال‌ها" else archiveYear.toString(), color = foreground)
+                                }
+                                DropdownMenu(expanded = yearMenuOpen, onDismissRequest = { yearMenuOpen = false }) {
+                                    DropdownMenuItem(text = { Text("همه سال‌ها") }, onClick = { archiveYear = 0; yearMenuOpen = false })
+                                    availableYears.forEach { year ->
+                                        DropdownMenuItem(text = { Text(year.toString()) }, onClick = { archiveYear = year; yearMenuOpen = false })
+                                    }
+                                }
+                            }
+                            TextButton(onClick = { search = ""; archiveMonth = 0; archiveYear = 0 }) { Text("پاک‌سازی") }
+                        }
+
+                        if (filteredRecords.isEmpty()) {
+                            Column(
+                                Modifier.fillMaxWidth().weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(22.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text("هیچ سابقه‌ای پیدا نشد", color = foreground, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("عبارت جست‌وجو یا فیلتر ماه و سال را تغییر بده.", color = secondary, fontSize = 11.sp)
+                                TextButton(onClick = { search = ""; archiveMonth = 0; archiveYear = 0 }) { Text("نمایش همه سوابق") }
+                            }
+                        } else {
+                            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                itemsIndexed(filteredRecords, key = { _, record -> record.id }) { index, record ->
+                                    val currentParts = jalaliParts(LocalDate.parse(record.date))
+                                    val previousParts = if (index > 0) jalaliParts(LocalDate.parse(filteredRecords[index - 1].date)) else null
+                                    if (previousParts == null || previousParts.first != currentParts.first || previousParts.second != currentParts.second) {
+                                        Row(Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text("${monthNames[currentParts.second]} ${currentParts.first}", color = AccentBright, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Text(
+                                                "${filteredRecords.count { val p = jalaliParts(LocalDate.parse(it.date)); p.first == currentParts.first && p.second == currentParts.second }} مورد",
+                                                color = secondary,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                    }
+                                    RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
+                                }
                             }
                         }
                     }
