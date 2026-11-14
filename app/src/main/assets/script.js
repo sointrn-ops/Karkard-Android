@@ -213,22 +213,28 @@ document.querySelectorAll(".nav-item").forEach(button => {
 
 function saveRecords() {
     const json = JSON.stringify(records);
+    let localSaved = false;
+    let nativeSaved = null;
 
     // Keep a browser-side fallback and a durable native copy on Android.
     try {
         localStorage.setItem("karbanRecords", json);
+        localSaved = true;
     } catch (error) {
         console.error("Local storage write failed:", error);
     }
 
     if (window.KarbanStorage && typeof window.KarbanStorage.saveRecords === "function") {
         try {
-            const saved = window.KarbanStorage.saveRecords(json);
-            if (!saved) console.error("Native storage did not confirm the save.");
+            nativeSaved = Boolean(window.KarbanStorage.saveRecords(json));
+            if (!nativeSaved) console.error("Native storage did not confirm the save.");
         } catch (error) {
+            nativeSaved = false;
             console.error("Native storage write failed:", error);
         }
     }
+
+    return nativeSaved === null ? localSaved : nativeSaved;
 }
 
 function formatNumber(value) {
@@ -309,11 +315,13 @@ $("recordForm").addEventListener("submit", event => {
         const index = records.findIndex(item => item.id === editingId);
         if (index !== -1) records[index] = record;
     } else records.push(record);
-    saveRecords();
+    const storageOk = saveRecords();
     resetForm();
     renderEverything();
     openPage("home");
-    alert("اطلاعات با موفقیت ذخیره شد.");
+    alert(storageOk
+        ? "اطلاعات با موفقیت ذخیره شد."
+        : "ذخیره‌سازی کامل تأیید نشد. لطفاً از اطلاعات پشتیبان بگیرید و دوباره تلاش کنید.");
 });
 
 function advanceTotal(record) {
