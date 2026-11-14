@@ -133,6 +133,7 @@ class MainActivity : ComponentActivity() {
                 try {
                     val json = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
                         ?: throw IllegalStateException("Unable to read backup")
+                    if (json.length > 10_000_000) throw IllegalArgumentException("Backup file is too large")
                     val quoted = JSONObject.quote(json)
                     webView.evaluateJavascript("window.importBackupFromNative($quoted)", null)
                 } catch (_: Exception) {
