@@ -506,7 +506,7 @@ private fun weekStart(date: LocalDate): LocalDate = date.minusDays(((date.dayOfW
 
 private fun jalaliParts(date: LocalDate): Triple<Int, Int, Int> {
     if (Build.VERSION.SDK_INT >= 24) {
-        val calendar = android.icu.util.PersianCalendar()
+        val calendar = android.icu.util.Calendar.getInstance(android.icu.util.ULocale("fa_IR@calendar=persian"))
         calendar.timeInMillis = date.atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
         return Triple(calendar.get(android.icu.util.Calendar.YEAR), calendar.get(android.icu.util.Calendar.MONTH) + 1, calendar.get(android.icu.util.Calendar.DAY_OF_MONTH))
     }
