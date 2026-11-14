@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
         dataFile = AtomicFile(File(filesDir, "karban_records.json"))
         val initial = readRecords()
         val preferences = getSharedPreferences("karban_settings", MODE_PRIVATE)
-        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup) }
+        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup, { uri, rows, scope -> KarbanPdf.write(this, uri, rows, scope) }) }
     }
 
     private fun encryptionKey(): SecretKey {
@@ -197,7 +197,8 @@ private fun KarbanApp(
     saveRecords: (List<WorkRecord>) -> Boolean,
     restoreRecords: (List<WorkRecord>) -> Boolean,
     exportBackup: (Uri, List<WorkRecord>) -> Unit,
-    readBackup: (Uri) -> List<WorkRecord>
+    readBackup: (Uri) -> List<WorkRecord>,
+    exportPdf: (Uri, List<WorkRecord>, String) -> Unit
 ) {
     var records by remember { mutableStateOf(initialRecords) }
     var page by remember { mutableStateOf("home") }
@@ -221,6 +222,26 @@ private fun KarbanApp(
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) runCatching { exportBackup(uri, records); notice = "فایل پشتیبان ذخیره شد." }
             .onFailure { notice = "ذخیره فایل پشتیبان ناموفق بود." }
+    }
+    var pdfScope by remember { mutableStateOf("month") }
+    var showPdfScopeMenu by remember { mutableStateOf(false) }
+    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        if (uri != null) runCatching {
+            val now = LocalDate.now()
+            val current = jalaliParts(now)
+            val selected = when (pdfScope) {
+                "day" -> records.filter { it.date == now.toString() }
+                "week" -> {
+                    val start = weekStart(now)
+                    records.filter { val d = LocalDate.parse(it.date); !d.isBefore(start) && !d.isAfter(start.plusDays(6)) }
+                }
+                "month" -> records.filter { val p = jalaliParts(LocalDate.parse(it.date)); p.first == current.first && p.second == current.second }
+                "year" -> records.filter { jalaliParts(LocalDate.parse(it.date)).first == current.first }
+                else -> records
+            }
+            exportPdf(uri, selected, pdfScope)
+            notice = "گزارش PDF ذخیره شد."
+        }.onFailure { notice = "ساخت فایل PDF ناموفق بود." }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -708,6 +729,17 @@ private fun KarbanApp(
                         Metric("مجموع مساعده‌ها", total(records.flatMap { it.advances }).toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
                         Metric("مجموع ساعت اضافه‌کاری", total(records.flatMap { it.overtimes }).toString(), surface, secondary, Modifier.fillMaxWidth())
                         Metric("مجموع مبلغ اضافه‌کاری", records.sumOf { day -> day.overtimes.sumOf { it.amount } }.toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
+                        Box {
+                            OutlinedButton(onClick = { showPdfScopeMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text("بازه خروجی PDF: " + when (pdfScope) { "day" -> "روزانه"; "week" -> "هفتگی"; "month" -> "ماهانه"; "year" -> "سالانه"; else -> "همه سوابق" })
+                            }
+                            DropdownMenu(expanded = showPdfScopeMenu, onDismissRequest = { showPdfScopeMenu = false }) {
+                                listOf("day" to "روزانه", "week" to "هفتگی", "month" to "ماهانه", "year" to "سالانه", "all" to "همه سوابق").forEach { (key, label) ->
+                                    DropdownMenuItem(text = { Text(label) }, onClick = { pdfScope = key; showPdfScopeMenu = false })
+                                }
+                            }
+                        }
+                        PrimaryButton("ذخیره گزارش PDF") { pdfLauncher.launch("KARBAN-report.pdf") }
                     }
                     "about" -> {
                         val context = LocalContext.current
