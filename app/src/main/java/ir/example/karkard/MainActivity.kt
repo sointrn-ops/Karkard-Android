@@ -455,28 +455,64 @@ private fun KarbanApp(
 
 private fun weekStart(date: LocalDate): LocalDate = date.minusDays(((date.dayOfWeek.value + 1) % 7).toLong())
 
-private fun persianDate(iso: String): String = runCatching {
-    val date = LocalDate.parse(iso)
+private fun jalaliParts(date: LocalDate): Triple<Int, Int, Int> {
     if (Build.VERSION.SDK_INT >= 24) {
         val calendar = android.icu.util.PersianCalendar()
         calendar.timeInMillis = date.atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-        "${calendar.get(android.icu.util.Calendar.YEAR)}/${(calendar.get(android.icu.util.Calendar.MONTH) + 1).toString().padStart(2, '0')}/${calendar.get(android.icu.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')}"
-    } else {
-        val gy = date.year; val gm = date.monthValue; val gd = date.dayOfMonth
-        val gdm = intArrayOf(0,31,if (java.time.Year.isLeap(gy.toLong())) 29 else 28,31,30,31,30,31,31,30,31,30,31)
-        var gy2 = gy - 1600; var gm2 = gm - 1; var gd2 = gd - 1
-        var gDayNo = 365 * gy2 + (gy2 + 3) / 4 - (gy2 + 99) / 100 + (gy2 + 399) / 400
-        for (i in 0 until gm2) gDayNo += gdm[i + 1]
-        gDayNo += gd2
-        var jDayNo = gDayNo - 79
-        val jNp = jDayNo / 12053; jDayNo %= 12053
-        var jy = 979 + 33 * jNp + 4 * (jDayNo / 1461)
-        jDayNo %= 1461
-        if (jDayNo >= 366) { jy += (jDayNo - 1) / 365; jDayNo = (jDayNo - 1) % 365 }
-        val jm = if (jDayNo < 186) 1 + jDayNo / 31 else 7 + (jDayNo - 186) / 30
-        val jd = 1 + if (jDayNo < 186) jDayNo % 31 else (jDayNo - 186) % 30
-        "$jy/$jm/$jd"
+        return Triple(calendar.get(android.icu.util.Calendar.YEAR), calendar.get(android.icu.util.Calendar.MONTH) + 1, calendar.get(android.icu.util.Calendar.DAY_OF_MONTH))
     }
+    val gy = date.year; val gm = date.monthValue; val gd = date.dayOfMonth
+    val gdm = intArrayOf(0,31,if (java.time.Year.isLeap(gy.toLong())) 29 else 28,31,30,31,30,31,31,30,31,30,31)
+    val gy2 = gy - 1600; val gm2 = gm - 1; val gd2 = gd - 1
+    var gDayNo = 365 * gy2 + (gy2 + 3) / 4 - (gy2 + 99) / 100 + (gy2 + 399) / 400
+    for (i in 0 until gm2) gDayNo += gdm[i + 1]
+    gDayNo += gd2
+    var jDayNo = gDayNo - 79
+    val jNp = jDayNo / 12053; jDayNo %= 12053
+    var jy = 979 + 33 * jNp + 4 * (jDayNo / 1461)
+    jDayNo %= 1461
+    if (jDayNo >= 366) { jy += (jDayNo - 1) / 365; jDayNo = (jDayNo - 1) % 365 }
+    val jm = if (jDayNo < 186) 1 + jDayNo / 31 else 7 + (jDayNo - 186) / 30
+    val jd = 1 + if (jDayNo < 186) jDayNo % 31 else (jDayNo - 186) % 30
+    return Triple(jy, jm, jd)
+}
+
+private fun jalaliToGregorian(year: Int, month: Int, day: Int): LocalDate {
+    require(year >= 1405 && month in 1..12 && day in 1..31)
+    val jy = year + 1595
+    var days = -355668 + 365 * jy + (jy / 33) * 8 + ((jy % 33 + 3) / 4) + day
+    days += if (month < 7) (month - 1) * 31 else (month - 7) * 30 + 186
+    var gy = 400 * (days / 146097)
+    days %= 146097
+    if (days > 36524) {
+        days--
+        gy += 100 * (days / 36524)
+        days %= 36524
+        if (days >= 365) days++
+    }
+    gy += 4 * (days / 1461)
+    days %= 1461
+    if (days > 365) {
+        gy += (days - 1) / 365
+        days = (days - 1) % 365
+    }
+    var gd = days + 1
+    val leap = gy % 4 == 0 && (gy % 100 != 0 || gy % 400 == 0)
+    val monthDays = intArrayOf(31, if (leap) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    var gm = 0
+    while (gm < 12 && gd > monthDays[gm]) { gd -= monthDays[gm]; gm++ }
+    return LocalDate.of(gy, gm + 1, gd)
+}
+
+private fun jalaliMonthLength(year: Int, month: Int): Int {
+    val start = jalaliToGregorian(year, month, 1)
+    val next = if (month == 12) jalaliToGregorian(year + 1, 1, 1) else jalaliToGregorian(year, month + 1, 1)
+    return java.time.temporal.ChronoUnit.DAYS.between(start, next).toInt()
+}
+
+private fun persianDate(iso: String): String = runCatching {
+    val parts = jalaliParts(LocalDate.parse(iso))
+    "${parts.first}/${parts.second.toString().padStart(2, '0')}/${parts.third.toString().padStart(2, '0')}"
 }.getOrDefault(iso)
 
 @Composable
