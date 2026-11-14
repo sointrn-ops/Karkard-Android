@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                     decryptRecords(stored.removePrefix(ENCRYPTED_PREFIX))
                 } else {
                     // Upgrade older plaintext app-private data to encrypted storage.
-                    if (stored.isNotEmpty()) saveRecords(stored)
+                    if (stored.isNotEmpty() && !saveRecords(stored)) return ""
                     stored
                 }
             } catch (error: Exception) {
