@@ -297,7 +297,7 @@ private fun KarbanApp(
                             Metric("روزهای اضافه‌کاری", records.count { total(it.overtimes) > 0 }.toString(), surface, secondary, Modifier.weight(1f))
                         }
                         Heading("آخرین فعالیت‌ها", "", foreground, secondary)
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(records.sortedByDescending { it.date }.take(5), key = { it.id }) { record ->
                                 RecordCard(record, surface, foreground, secondary, false, { edit(record) }, { deleteTarget = record })
                             }
@@ -332,7 +332,7 @@ private fun KarbanApp(
                     }
                     "add" -> {
                         Heading(if (editingId == null) "ثبت کارکرد" else "ویرایش کارکرد", "اطلاعات روزانه را وارد کنید.", foreground, secondary)
-                        Panel(surface) {
+                        Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column {
                                     Text("تاریخ ثبت", color = secondary, fontSize = 11.sp)
@@ -385,7 +385,7 @@ private fun KarbanApp(
                     "records" -> {
                         Heading("سوابق کارکرد", "جست‌وجو، ویرایش و حذف اطلاعات", foreground, secondary)
                         OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("جست‌وجو در تاریخ و گزارش...") })
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(records.sortedByDescending { it.date }.filter { persianDate(it.date).contains(search) || it.date.contains(search) || it.report.contains(search) }, key = { it.id }) { record ->
                                 RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
                             }
@@ -400,7 +400,7 @@ private fun KarbanApp(
                     }
                     "about" -> {
                         Heading("درباره برنامه", "KARBAN · نسخه 2.2", foreground, secondary)
-                        Panel(surface) {
+                        Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text("KARBAN", color = AccentBright, fontSize = 26.sp, fontWeight = FontWeight.Black)
                             Text("مدیریت هوشمند کارکرد", color = secondary)
                             Text("ابزاری برای ثبت و مدیریت کارکرد روزانه، مساعده، اضافه‌کاری و گزارش‌های کاری.", color = foreground)
@@ -572,8 +572,8 @@ private fun Heading(title: String, subtitle: String, color: Color, muted: Color)
     }
 }
 @Composable
-private fun Panel(color: Color, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).background(color, RoundedCornerShape(19.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+private fun Panel(color: Color, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier.fillMaxWidth().padding(bottom = 10.dp).background(color, RoundedCornerShape(19.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
 }
 @Composable
 private fun Metric(label: String, value: String, surface: Color, muted: Color, modifier: Modifier = Modifier) {
