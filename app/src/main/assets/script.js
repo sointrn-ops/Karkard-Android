@@ -560,7 +560,7 @@ window.importBackupFromNative = raw => {
 
         const restored = payload.records.map(item => {
             if (!item || typeof item !== "object" || typeof item.id !== "string" ||
-                typeof item.date !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.date) ||
+                typeof item.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(item.date) ||
                 !Array.isArray(item.advances) || !Array.isArray(item.overtimes)) {
                 throw new Error("Invalid record");
             }
