@@ -884,7 +884,7 @@ private fun KarbanApp(
 
 private fun weekStart(date: LocalDate): LocalDate = date.minusDays(((date.dayOfWeek.value + 1) % 7).toLong())
 
-private fun jalaliParts(date: LocalDate): Triple<Int, Int, Int> {
+internal fun jalaliParts(date: LocalDate): Triple<Int, Int, Int> {
     if (Build.VERSION.SDK_INT >= 24) {
         val calendar = android.icu.util.Calendar.getInstance(android.icu.util.ULocale("fa_IR@calendar=persian"))
         calendar.timeInMillis = date.atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -939,7 +939,7 @@ private fun jalaliMonthLength(year: Int, month: Int): Int {
     return java.time.temporal.ChronoUnit.DAYS.between(start, next).toInt()
 }
 
-private fun persianDate(iso: String): String = runCatching {
+internal fun persianDate(iso: String): String = runCatching {
     val parts = jalaliParts(LocalDate.parse(iso))
     "${parts.first}/${parts.second.toString().padStart(2, '0')}/${parts.third.toString().padStart(2, '0')}"
 }.getOrDefault(iso)
