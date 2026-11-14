@@ -288,21 +288,120 @@ private fun KarbanApp(
 
                 when (page) {
                     "home" -> {
-                        Heading("خلاصه کارکرد", "نگاهی به وضعیت فعالیت‌های شما", foreground, secondary)
-                        Panel(surface) {
-                            Text("مجموع مساعده‌ها", color = secondary, fontSize = 12.sp)
-                            Text(total(records.flatMap { it.advances }).toLong().toString(), color = AccentBright, fontSize = 31.sp, fontWeight = FontWeight.Bold)
-                            Text("مجموع مبالغ ثبت‌شده", color = secondary, fontSize = 11.sp)
+                        val today = LocalDate.now()
+                        val todayRecords = records.filter { it.date == today.toString() }
+                        val week = weekStart(today)
+                        val weekRecords = (0..6).map { offset ->
+                            val date = week.plusDays(offset.toLong())
+                            records.count { it.date == date.toString() }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Metric("روزهای ثبت‌شده", records.size.toString(), surface, secondary, Modifier.weight(1f))
-                            Metric("روزهای اضافه‌کاری", records.count { total(it.overtimes) > 0 }.toString(), surface, secondary, Modifier.weight(1f))
+                        val maxWeekCount = maxOf(1, weekRecords.maxOrNull() ?: 0)
+                        val monthRecords = records.filter {
+                            val parts = jalaliParts(LocalDate.parse(it.date))
+                            val current = jalaliParts(today)
+                            parts.first == current.first && parts.second == current.second
                         }
-                        Heading("آخرین فعالیت‌ها", "", foreground, secondary)
-                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(records.sortedByDescending { it.date }.take(5), key = { it.id }) { record ->
-                                RecordCard(record, surface, foreground, secondary, false, { edit(record) }, { deleteTarget = record })
+                        val monthAdvance = total(monthRecords.flatMap { it.advances }).toLong()
+                        val allOvertime = total(records.flatMap { it.overtimes })
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                            Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp)) {
+                                Text("داشبورد کاربان", color = AccentBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                                Text("امروز چه خبر؟", color = foreground, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                                Text(persianDate(today.toString()), color = secondary, fontSize = 12.sp)
                             }
+                            Column(
+                                Modifier.fillMaxWidth()
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF1C8B5A), Color(0xFF103B2B))),
+                                        RoundedCornerShape(23.dp)
+                                    ).padding(19.dp),
+                                verticalArrangement = Arrangement.spacedBy(9.dp)
+                            ) {
+                                Text("خلاصه این ماه", color = Color.White.copy(alpha = 0.82f), fontSize = 13.sp)
+                                Text(monthAdvance.toString(), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black)
+                                Text("مجموع مساعده‌های ثبت‌شده در ماه جاری", color = Color.White.copy(alpha = 0.78f), fontSize = 11.sp)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text("KARBAN", color = Color.White.copy(alpha = 0.65f), fontSize = 10.sp, letterSpacing = 2.sp)
+                                    Text("۱۴۰۵ به بعد", color = Color.White.copy(alpha = 0.65f), fontSize = 10.sp)
+                                }
+                            }
+                            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
+                                    Text("روزهای ثبت‌شده", color = secondary, fontSize = 11.sp)
+                                    Text(records.size.toString(), color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                                    Text("در کل", color = secondary, fontSize = 10.sp)
+                                }
+                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
+                                    Text("اضافه‌کاری", color = secondary, fontSize = 11.sp)
+                                    Text(allOvertime.toString(), color = AccentBright, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                                    Text("مجموع ساعت ثبت‌شده", color = secondary, fontSize = 10.sp)
+                                }
+                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
+                                    Text("امروز", color = secondary, fontSize = 11.sp)
+                                    Text(todayRecords.size.toString(), color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                                    Text("ثبت", color = secondary, fontSize = 10.sp)
+                                }
+                            }
+                            Text("دسترسی سریع", color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 19.dp, bottom = 9.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                Button(
+                                    onClick = { beginNew() },
+                                    modifier = Modifier.weight(1f).height(49.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = AppBg),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) { Text("＋ ثبت کارکرد", fontWeight = FontWeight.Bold) }
+                                OutlinedButton(
+                                    onClick = { page = "week" },
+                                    modifier = Modifier.weight(1f).height(49.dp),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) { Text("نمایش هفته", color = foreground) }
+                            }
+                            Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("روند این هفته", color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                Text("۷ روز اخیر", color = secondary, fontSize = 11.sp)
+                            }
+                            Row(
+                                Modifier.fillMaxWidth().background(surface, RoundedCornerShape(18.dp)).padding(horizontal = 10.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                (0..6).forEach { index ->
+                                    val date = week.plusDays(index.toLong())
+                                    val count = weekRecords[index]
+                                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(count.toString(), color = secondary, fontSize = 9.sp)
+                                        Box(Modifier.fillMaxWidth().height(58.dp), contentAlignment = Alignment.BottomCenter) {
+                                            Box(
+                                                Modifier.fillMaxWidth(0.56f)
+                                                    .height(if (count == 0) 4.dp else (10 + (count * 42 / maxWeekCount)).dp)
+                                                    .background(if (date == today) AccentBright else Accent.copy(alpha = 0.72f), RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                                            )
+                                        }
+                                        Text(listOf("ش", "ی", "د", "س", "چ", "پ", "ج")[index], color = if (date == today) AccentBright else secondary, fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                            Row(Modifier.fillMaxWidth().padding(top = 19.dp, bottom = 9.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("آخرین فعالیت‌ها", color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                TextButton(onClick = { page = "records" }) { Text("همه سوابق") }
+                            }
+                            val recent = records.sortedByDescending { it.date }.take(3)
+                            if (recent.isEmpty()) {
+                                Column(
+                                    Modifier.fillMaxWidth().background(surface, RoundedCornerShape(18.dp)).padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                                ) {
+                                    Text("هنوز فعالیتی ثبت نشده", color = foreground, fontWeight = FontWeight.Bold)
+                                    Text("اولین کارکردت را ثبت کن تا گزارش‌ها اینجا نمایش داده شوند.", color = secondary, fontSize = 11.sp)
+                                    TextButton(onClick = { beginNew() }) { Text("شروع ثبت کارکرد") }
+                                }
+                            } else {
+                                recent.forEach { record ->
+                                    RecordCard(record, surface, foreground, secondary, false, { edit(record) }, { deleteTarget = record })
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
                         }
                     }
                     "week" -> {
