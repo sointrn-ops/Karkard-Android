@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:label="KARBAN"
+        android:label="KARBAN 3.0"
         android:icon="@drawable/ic_karban_launcher"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
