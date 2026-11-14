@@ -9,21 +9,15 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
-import android.icu.util.Calendar
-import android.icu.util.ULocale
 import java.time.LocalDate
 
 object KarbanPdf {
     fun write(context: Context, uri: Uri, records: List<WorkRecord>, scope: String) {
         val now = LocalDate.now()
-        val jalali = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = now.atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }
-        val jy = jalali.get(Calendar.YEAR)
-        val jm = jalali.get(Calendar.MONTH) + 1
-        fun faDate(iso: String): String {
-            val date = LocalDate.parse(iso)
-            val c = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = date.atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }
-            return "${c.get(Calendar.YEAR)}/${(c.get(Calendar.MONTH) + 1).toString().padStart(2, \"0\")}/${c.get(Calendar.DAY_OF_MONTH).toString().padStart(2, \"0\")}"
-        }
+        val jalali = jalaliParts(now)
+        val jy = jalali.first
+        val jm = jalali.second
+        fun faDate(iso: String): String = persianDate(iso)
         val range = when (scope) {
             "day" -> faDate(now.toString())
             "week" -> { val start = now.minusDays(((now.dayOfWeek.value + 1) % 7).toLong()); "${faDate(start.toString())} تا ${faDate(start.plusDays(6).toString())}" }
