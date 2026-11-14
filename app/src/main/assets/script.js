@@ -499,6 +499,99 @@ function renderEverything() {
     renderReports();
 }
 
+function createBackupPayload() {
+    return JSON.stringify({
+        app: "KARBAN",
+        formatVersion: 1,
+        exportedAt: new Date().toISOString(),
+        records
+    }, null, 2);
+}
+
+function exportBackup() {
+    const json = createBackupPayload();
+    if (window.KarbanStorage && typeof window.KarbanStorage.exportBackup === "function") {
+        window.KarbanStorage.exportBackup(json);
+        return;
+    }
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "KARBAN-backup.json";
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function importBackup() {
+    if (window.KarbanStorage && typeof window.KarbanStorage.importBackup === "function") {
+        window.KarbanStorage.importBackup();
+        return;
+    }
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = ".json,application/json";
+    picker.addEventListener("change", async () => {
+        const file = picker.files && picker.files[0];
+        if (!file) return;
+        try {
+            window.importBackupFromNative(await file.text());
+        } catch {
+            alert("خواندن فایل پشتیبان ناموفق بود.");
+        }
+    });
+    picker.click();
+}
+
+window.onNativeBackupExported = success => {
+    alert(success ? "فایل پشتیبان با موفقیت ذخیره شد." : "ذخیره فایل پشتیبان ناموفق بود.");
+};
+
+window.onNativeBackupImported = success => {
+    if (!success) alert("بازیابی فایل پشتیبان ناموفق بود.");
+};
+
+window.importBackupFromNative = raw => {
+    try {
+        const payload = JSON.parse(raw);
+        if (!payload || payload.app !== "KARBAN" || payload.formatVersion !== 1 || !Array.isArray(payload.records)) {
+            throw new Error("Invalid backup format");
+        }
+
+        const restored = payload.records.map(item => {
+            if (!item || typeof item !== "object" || typeof item.id !== "string" ||
+                typeof item.date !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.date) ||
+                !Array.isArray(item.advances) || !Array.isArray(item.overtimes)) {
+                throw new Error("Invalid record");
+            }
+            const cleanRows = rows => rows.map(row => {
+                if (!row || typeof row !== "object" || !Number.isFinite(Number(row.value))) {
+                    throw new Error("Invalid row");
+                }
+                return { title: String(row.title || ""), value: Number(row.value) };
+            });
+            return {
+                id: item.id,
+                date: item.date,
+                advances: cleanRows(item.advances),
+                overtimes: cleanRows(item.overtimes),
+                report: String(item.report || "")
+            };
+        });
+
+        if (!confirm("با بازیابی این فایل، سوابق فعلی با اطلاعات داخل پشتیبان جایگزین می‌شوند. ادامه می‌دهید؟")) return;
+        records = restored;
+        saveRecords();
+        renderEverything();
+        openPage("home");
+        alert("اطلاعات با موفقیت بازیابی شد.");
+    } catch (error) {
+        console.error("Backup import failed:", error);
+        alert("فایل پشتیبان معتبر نیست یا ساختار آن پشتیبانی نمی‌شود.");
+    }
+};
+
+
 selectedDate = todayISO();
 renderEverything();
 openPage("home");
