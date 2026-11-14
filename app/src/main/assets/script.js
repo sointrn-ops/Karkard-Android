@@ -565,34 +565,45 @@ window.onNativeBackupImported = success => {
 window.importBackupFromNative = raw => {
     try {
         const payload = JSON.parse(raw);
-        if (!payload || payload.app !== "KARBAN" || payload.formatVersion !== 1 || !Array.isArray(payload.records)) {
+        if (!payload || payload.app !== "KARBAN" || payload.formatVersion !== 1 ||
+            !Array.isArray(payload.records) || payload.records.length > 10000) {
             throw new Error("Invalid backup format");
         }
 
         const restored = payload.records.map(item => {
-            if (!item || typeof item !== "object" || typeof item.id !== "string" ||
-                typeof item.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(item.date) ||
-                !Array.isArray(item.advances) || !Array.isArray(item.overtimes)) {
+            if (!item || typeof item !== "object" || typeof item.id !== "string" || item.id.length > 100 ||
+                typeof item.date !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.date) ||
+                !Array.isArray(item.advances) || !Array.isArray(item.overtimes) ||
+                item.advances.length > 100 || item.overtimes.length > 100) {
                 throw new Error("Invalid record");
             }
             const cleanRows = rows => rows.map(row => {
-                if (!row || typeof row !== "object" || !Number.isFinite(Number(row.value))) {
+                if (!row || typeof row !== "object" || !Number.isFinite(Number(row.value)) ||
+                    Number(row.value) < 0 || Number(row.value) > 1000000000 ||
+                    String(row.title || "").length > 200) {
                     throw new Error("Invalid row");
                 }
                 return { title: String(row.title || ""), value: Number(row.value) };
             });
+            const report = String(item.report || "");
+            if (report.length > 5000) throw new Error("Report too long");
             return {
                 id: item.id,
                 date: item.date,
                 advances: cleanRows(item.advances),
                 overtimes: cleanRows(item.overtimes),
-                report: String(item.report || "")
+                report
             };
         });
 
         if (!confirm("با بازیابی این فایل، سوابق فعلی با اطلاعات داخل پشتیبان جایگزین می‌شوند. ادامه می‌دهید؟")) return;
+        const previousRecords = records;
         records = restored;
-        saveRecords();
+        if (!saveRecords()) {
+            records = previousRecords;
+            alert("ذخیره اطلاعات بازیابی‌شده ناموفق بود. سوابق قبلی حفظ شدند.");
+            return;
+        }
         renderEverything();
         openPage("home");
         alert("اطلاعات با موفقیت بازیابی شد.");
