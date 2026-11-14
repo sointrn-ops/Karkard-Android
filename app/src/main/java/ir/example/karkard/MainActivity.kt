@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
         dataFile = AtomicFile(File(filesDir, "karban_records.json"))
         val initial = readRecords()
         val preferences = getSharedPreferences("karban_settings", MODE_PRIVATE)
-        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, ::writeRecords, ::exportBackup, ::readBackup) }
+        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup) }
     }
 
     private fun encryptionKey(): SecretKey {
@@ -151,6 +151,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun restoreRecords(records: List<WorkRecord>): Boolean {
+        val previousHealth = storageHealthy
+        storageHealthy = true
+        val restored = writeRecords(records)
+        if (!restored) storageHealthy = previousHealth
+        return restored
+    }
+
     private fun exportBackup(uri: Uri, records: List<WorkRecord>) {
         val payload = JSONObject().put("app", "KARBAN").put("formatVersion", 1)
             .put("records", JSONArray(encodeRecords(records))).toString(2)
@@ -175,6 +183,7 @@ private fun KarbanApp(
     initialLightTheme: Boolean,
     saveTheme: (Boolean) -> Unit,
     saveRecords: (List<WorkRecord>) -> Boolean,
+    restoreRecords: (List<WorkRecord>) -> Boolean,
     exportBackup: (Uri, List<WorkRecord>) -> Unit,
     readBackup: (Uri) -> List<WorkRecord>
 ) {
@@ -190,6 +199,7 @@ private fun KarbanApp(
     var notice by remember { mutableStateOf(if (storageHealthy) "" else "خواندن اطلاعات قبلی ممکن نشد. برای محافظت از سوابق، ذخیره‌سازی غیرفعال شده است. برنامه را حذف نکنید و فایل پشتیبان سالم را بازیابی کنید.") }
     var weekOffset by remember { mutableIntStateOf(0) }
     var deleteTarget by remember { mutableStateOf<WorkRecord?>(null) }
+    var pendingRestore by remember { mutableStateOf<List<WorkRecord>?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     var calendarYear by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).first) }
     var calendarMonth by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).second) }
@@ -201,10 +211,7 @@ private fun KarbanApp(
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val restored = runCatching { readBackup(uri) }.getOrElse { notice = "فایل پشتیبان معتبر نیست."; null }
-            if (restored != null) {
-                if (saveRecords(restored)) { records = restored; notice = "اطلاعات بازیابی شد." }
-                else notice = "ذخیره اطلاعات بازیابی‌شده ناموفق بود؛ سوابق قبلی حفظ شدند."
-            }
+            if (restored != null) pendingRestore = restored
         }
     }
 
@@ -447,6 +454,24 @@ private fun KarbanApp(
                 }
             },
             confirmButton = { TextButton(onClick = { showCalendar = false }) { Text("بستن") } }
+        )
+    }
+    if (pendingRestore != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRestore = null },
+            title = { Text("بازیابی اطلاعات") },
+            text = { Text("سوابق فعلی با اطلاعات فایل پشتیبان جایگزین می‌شوند. قبل از ادامه مطمئن شوید که فایل انتخابی متعلق به کاربان است.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val restored = pendingRestore
+                    if (restored != null) {
+                        if (restoreRecords(restored)) { records = restored; notice = "اطلاعات با موفقیت بازیابی شد." }
+                        else notice = "بازیابی ناموفق بود؛ اطلاعات فعلی حفظ شدند."
+                    }
+                    pendingRestore = null
+                }) { Text("جایگزینی و بازیابی") }
+            },
+            dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("انصراف") } }
         )
     }
     if (deleteTarget != null) {
