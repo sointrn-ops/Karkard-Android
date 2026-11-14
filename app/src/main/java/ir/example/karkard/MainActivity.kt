@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -15,6 +17,13 @@ import androidx.activity.OnBackPressedCallback
 import android.util.AtomicFile
 import org.json.JSONObject
 import java.io.File
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -23,21 +32,38 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val REQUEST_EXPORT_BACKUP = 7101
         private const val REQUEST_IMPORT_BACKUP = 7102
+        private const val KEY_ALIAS = "karban_records_key_v1"
+        private const val ENCRYPTED_PREFIX = "KARBAN1:"
+        private const val MAX_JSON_CHARS = 10_000_000
     }
 
     inner class KarbanStorage {
         @JavascriptInterface
         fun loadRecords(): String {
             return try {
-                recordsFile.openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
-            } catch (_: Exception) {
+                val stored = recordsFile.openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
+                if (stored.startsWith(ENCRYPTED_PREFIX)) {
+                    decryptRecords(stored.removePrefix(ENCRYPTED_PREFIX))
+                } else {
+                    // Upgrade older plaintext app-private data to encrypted storage.
+                    if (stored.isNotEmpty()) saveRecords(stored)
+                    stored
+                }
+            } catch (error: Exception) {
+                android.util.Log.e("KARBAN", "Could not read encrypted records", error)
                 ""
             }
         }
 
         @JavascriptInterface
         fun saveRecords(json: String): Boolean {
-            if (json.length > 10_000_000) return false
+            if (json.length > MAX_JSON_CHARS) return false
+            val encrypted = try {
+                ENCRYPTED_PREFIX + encryptRecords(json)
+            } catch (error: Exception) {
+                android.util.Log.e("KARBAN", "Could not encrypt records", error)
+                return false
+            }
             val stream = try {
                 recordsFile.startWrite()
             } catch (_: Exception) {
@@ -45,7 +71,7 @@ class MainActivity : ComponentActivity() {
             }
 
             return try {
-                stream.write(json.toByteArray(Charsets.UTF_8))
+                stream.write(encrypted.toByteArray(Charsets.UTF_8))
                 recordsFile.finishWrite(stream)
                 true
             } catch (_: Exception) {
@@ -82,6 +108,44 @@ class MainActivity : ComponentActivity() {
 
     private var pendingBackupJson: String? = null
 
+    private fun getRecordsKey(): SecretKey {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        val existing = keyStore.getKey(KEY_ALIAS, null)
+        if (existing is SecretKey) return existing
+
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        generator.init(
+            KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build()
+        )
+        return generator.generateKey()
+    }
+
+    private fun encryptRecords(plainText: String): String {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, getRecordsKey())
+        val encrypted = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
+        val combined = cipher.iv + encrypted
+        return Base64.encodeToString(combined, Base64.NO_WRAP)
+    }
+
+    private fun decryptRecords(encoded: String): String {
+        val combined = Base64.decode(encoded, Base64.NO_WRAP)
+        require(combined.size > 12) { "Invalid encrypted record data" }
+        val iv = combined.copyOfRange(0, 12)
+        val encrypted = combined.copyOfRange(12, combined.size)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, getRecordsKey(), GCMParameterSpec(128, iv))
+        return cipher.doFinal(encrypted).toString(Charsets.UTF_8)
+    }
+
+
     private fun handleAppNavigation(url: String): Boolean {
         if (url.startsWith("file:///android_asset/")) return false
         if (url.startsWith("mailto:") || url.startsWith("tel:")) {
@@ -99,6 +163,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         recordsFile = AtomicFile(File(filesDir, "karban_records.json"))
+        WebView.setWebContentsDebuggingEnabled(false)
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -110,6 +175,10 @@ class MainActivity : ComponentActivity() {
             settings.blockNetworkLoads = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.javaScriptCanOpenWindowsAutomatically = false
+            settings.setSupportMultipleWindows(false)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                settings.safeBrowsingEnabled = true
+            }
             addJavascriptInterface(KarbanStorage(), "KarbanStorage")
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
