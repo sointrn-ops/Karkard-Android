@@ -1,6 +1,5 @@
 package ir.example.karkard
 
-import android.app.DatePickerDialog
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -22,7 +21,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -61,7 +59,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         dataFile = AtomicFile(File(filesDir, "karban_records.json"))
         val initial = readRecords()
-        setContent { KarbanApp(initial, storageHealthy, ::writeRecords, ::exportBackup, ::readBackup) }
+        val preferences = getSharedPreferences("karban_settings", MODE_PRIVATE)
+        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, ::writeRecords, ::exportBackup, ::readBackup) }
     }
 
     private fun encryptionKey(): SecretKey {
@@ -173,13 +172,15 @@ class MainActivity : ComponentActivity() {
 private fun KarbanApp(
     initialRecords: List<WorkRecord>,
     storageHealthy: Boolean,
+    initialLightTheme: Boolean,
+    saveTheme: (Boolean) -> Unit,
     saveRecords: (List<WorkRecord>) -> Boolean,
     exportBackup: (Uri, List<WorkRecord>) -> Unit,
     readBackup: (Uri) -> List<WorkRecord>
 ) {
     var records by remember { mutableStateOf(initialRecords) }
     var page by remember { mutableStateOf("home") }
-    var isLight by remember { mutableStateOf(false) }
+    var isLight by remember { mutableStateOf(initialLightTheme) }
     var selectedDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var editingId by remember { mutableStateOf<String?>(null) }
     var advances by remember { mutableStateOf(listOf(WorkItem("", 0.0))) }
@@ -188,10 +189,10 @@ private fun KarbanApp(
     var search by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf(if (storageHealthy) "" else "خواندن اطلاعات قبلی ممکن نشد. برای محافظت از سوابق، ذخیره‌سازی غیرفعال شده است. برنامه را حذف نکنید و فایل پشتیبان سالم را بازیابی کنید.") }
     var weekOffset by remember { mutableIntStateOf(0) }
+    var deleteTarget by remember { mutableStateOf<WorkRecord?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     var calendarYear by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).first) }
     var calendarMonth by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).second) }
-    val context = LocalContext.current
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) runCatching { exportBackup(uri, records); notice = "فایل پشتیبان ذخیره شد." }
@@ -264,7 +265,7 @@ private fun KarbanApp(
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("درباره", color = AccentBright, modifier = Modifier.clickable { page = "about" }.padding(8.dp))
-                        Text(if (isLight) "☾" else "☀", color = foreground, fontSize = 20.sp, modifier = Modifier.clickable { isLight = !isLight }.padding(8.dp))
+                        Text(if (isLight) "☾" else "☀", color = foreground, fontSize = 20.sp, modifier = Modifier.clickable { isLight = !isLight; saveTheme(isLight) }.padding(8.dp))
                     }
                 }
 
@@ -283,7 +284,7 @@ private fun KarbanApp(
                         Heading("آخرین فعالیت‌ها", "", foreground, secondary)
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(records.sortedByDescending { it.date }.take(5), key = { it.id }) { record ->
-                                RecordCard(record, surface, foreground, secondary, false, { edit(record) }, { persist(records.filterNot { it.id == record.id }) })
+                                RecordCard(record, surface, foreground, secondary, false, { edit(record) }, { deleteTarget = record })
                             }
                         }
                     }
@@ -310,7 +311,7 @@ private fun KarbanApp(
                         }
                         Text("تاریخ انتخاب‌شده: ${persianDate(selectedDate)}", color = AccentBright, modifier = Modifier.padding(vertical = 13.dp))
                         records.filter { it.date == selectedDate }.forEach { record ->
-                            RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { persist(records.filterNot { it.id == record.id }) })
+                            RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
                         }
                         PrimaryButton("＋ ثبت اطلاعات این روز") { beginNew(selectedDate) }
                     }
@@ -371,7 +372,7 @@ private fun KarbanApp(
                         OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("جست‌وجو در تاریخ و گزارش...") })
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(records.sortedByDescending { it.date }.filter { persianDate(it.date).contains(search) || it.date.contains(search) || it.report.contains(search) }, key = { it.id }) { record ->
-                                RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { persist(records.filterNot { it.id == record.id }) })
+                                RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
                             }
                         }
                     }
@@ -446,6 +447,21 @@ private fun KarbanApp(
                 }
             },
             confirmButton = { TextButton(onClick = { showCalendar = false }) { Text("بستن") } }
+        )
+    }
+    if (deleteTarget != null) {
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("حذف کارکرد") },
+            text = { Text("آیا از حذف اطلاعات این روز مطمئن هستید؟") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val target = deleteTarget
+                    if (target != null) persist(records.filterNot { it.id == target.id })
+                    deleteTarget = null
+                }) { Text("حذف", color = Color(0xFFED6262)) }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("انصراف") } }
         )
     }
     if (notice.isNotBlank()) {
