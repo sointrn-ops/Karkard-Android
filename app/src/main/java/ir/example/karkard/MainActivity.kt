@@ -711,7 +711,7 @@ private fun KarbanApp(
                     }
                     "about" -> {
                         val context = LocalContext.current
-                        Heading("درباره برنامه", "KARBAN · نسخه 2.3", foreground, secondary)
+                        Heading("درباره برنامه", "KARBAN · نسخه 3.0", foreground, secondary)
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text("KARBAN", color = AccentBright, fontSize = 26.sp, fontWeight = FontWeight.Black)
                             Text("Work & Performance Tracker", color = secondary)
@@ -720,7 +720,7 @@ private fun KarbanApp(
                             Divider(color = secondary.copy(alpha = 0.3f))
                             Text("مشخصات برنامه", color = AccentBright, fontWeight = FontWeight.Bold)
                             Text("نام برنامه: KARBAN", color = foreground)
-                            Text("نسخه: 2.3", color = foreground)
+                            Text("نسخه: 3.0", color = foreground)
                             Text("سال انتشار: ۱۴۰۵", color = foreground)
                             Text("سازنده: محمد جواد احمدی", color = foreground)
                             Divider(color = secondary.copy(alpha = 0.3f))
@@ -753,7 +753,7 @@ private fun KarbanApp(
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("تماس با 09017975131") }
                             Divider(color = secondary.copy(alpha = 0.3f))
-                            Text("ذخیره‌سازی داخلی با AES-GCM و Android Keystore محافظت می‌شود.", color = secondary, fontSize = 12.sp)
+                            Text("امکانات: داشبورد، ثبت روزانه، تقویم شمسی، نمای هفتگی، آرشیو و جست‌وجوی سوابق، گزارش عملکرد و مدیریت پشتیبان.", color = foreground, fontSize = 12.sp)\n                            Text("ذخیره‌سازی داخلی با AES-GCM و Android Keystore محافظت می‌شود.", color = secondary, fontSize = 12.sp)
                             Text("فایل پشتیبان JSON رمزنگاری نشده است؛ آن را در محل امن نگهداری کنید.", color = secondary, fontSize = 12.sp)
                             PrimaryButton("دریافت فایل پشتیبان") { exportLauncher.launch("KARBAN-backup.json") }
                             OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json")) }, modifier = Modifier.fillMaxWidth()) { Text("بازیابی از فایل") }
