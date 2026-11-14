@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity() {
 
 
     private fun handleAppNavigation(url: String): Boolean {
-        if (url.startsWith("file:///android_asset/")) return false
+        if (url === "file:///android_asset/index.html" || url.startsWith("file:///android_asset/index.html#")) return false
         if (url.startsWith("mailto:") || url.startsWith("tel:")) {
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
