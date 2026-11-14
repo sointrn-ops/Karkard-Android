@@ -711,15 +711,16 @@ private fun KarbanApp(
                     }
                     "about" -> {
                         val context = LocalContext.current
-                        Heading("درباره برنامه", "KARBAN · نسخه 2.2", foreground, secondary)
+                        Heading("درباره برنامه", "KARBAN · نسخه 2.3", foreground, secondary)
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text("KARBAN", color = AccentBright, fontSize = 26.sp, fontWeight = FontWeight.Black)
-                            Text("مدیریت هوشمند کارکرد", color = secondary)
-                            Text("کاربان ابزاری برای ثبت و مدیریت کارکرد روزانه، مساعده، اضافه‌کاری و گزارش‌های کاری است که با هدف ساده‌تر و منظم‌تر کردن امور روزانه طراحی شده است.", color = foreground)
+                            Text("Work & Performance Tracker", color = secondary)
+                            Text("مدیریت هوشمند کارکرد و عملکرد", color = foreground)
+                            Text("KARBAN ابزار ثبت و مدیریت کارکرد روزانه، مساعده، اضافه‌کاری و گزارش‌های کاری است؛ با تمرکز بر نظم، دقت و نگهداری امن سوابق.", color = foreground)
                             Divider(color = secondary.copy(alpha = 0.3f))
                             Text("مشخصات برنامه", color = AccentBright, fontWeight = FontWeight.Bold)
                             Text("نام برنامه: KARBAN", color = foreground)
-                            Text("نسخه: 2.2", color = foreground)
+                            Text("نسخه: 2.3", color = foreground)
                             Text("سال انتشار: ۱۴۰۵", color = foreground)
                             Text("سازنده: محمد جواد احمدی", color = foreground)
                             Divider(color = secondary.copy(alpha = 0.3f))
