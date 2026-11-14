@@ -1,6 +1,7 @@
 package ir.example.karkard
 
 import android.net.Uri
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.AtomicFile
@@ -23,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -399,13 +401,48 @@ private fun KarbanApp(
                         Metric("مجموع ساعت اضافه‌کاری", total(records.flatMap { it.overtimes }).toString(), surface, secondary, Modifier.fillMaxWidth())
                     }
                     "about" -> {
+                        val context = LocalContext.current
                         Heading("درباره برنامه", "KARBAN · نسخه 2.2", foreground, secondary)
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text("KARBAN", color = AccentBright, fontSize = 26.sp, fontWeight = FontWeight.Black)
                             Text("مدیریت هوشمند کارکرد", color = secondary)
-                            Text("ابزاری برای ثبت و مدیریت کارکرد روزانه، مساعده، اضافه‌کاری و گزارش‌های کاری.", color = foreground)
+                            Text("کاربان ابزاری برای ثبت و مدیریت کارکرد روزانه، مساعده، اضافه‌کاری و گزارش‌های کاری است که با هدف ساده‌تر و منظم‌تر کردن امور روزانه طراحی شده است.", color = foreground)
                             Divider(color = secondary.copy(alpha = 0.3f))
+                            Text("مشخصات برنامه", color = AccentBright, fontWeight = FontWeight.Bold)
+                            Text("نام برنامه: KARBAN", color = foreground)
+                            Text("نسخه: 2.2", color = foreground)
+                            Text("سال انتشار: ۱۴۰۵", color = foreground)
                             Text("سازنده: محمد جواد احمدی", color = foreground)
+                            Divider(color = secondary.copy(alpha = 0.3f))
+                            Text("حقوق مالکیت", color = AccentBright, fontWeight = FontWeight.Bold)
+                            Text("تمام حقوق مادی و معنوی این برنامه متعلق به محمد جواد احمدی است. هرگونه تکثیر یا انتشار بدون اجازه سازنده مجاز نیست.", color = foreground)
+                            Divider(color = secondary.copy(alpha = 0.3f))
+                            Text("ارتباط با سازنده", color = AccentBright, fontWeight = FontWeight.Bold)
+                            Text("ایمیل: sointrn@gmail.com", color = foreground)
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:sointrn@gmail.com"))
+                                    runCatching { context.startActivity(intent) }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("ارسال ایمیل به سازنده") }
+                            Text("شماره تماس اول: 09904711802", color = foreground)
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:09904711802"))
+                                    runCatching { context.startActivity(intent) }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("تماس با 09904711802") }
+                            Text("شماره تماس دوم: 09077975131", color = foreground)
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:09077975131"))
+                                    runCatching { context.startActivity(intent) }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("تماس با 09077975131") }
+                            Divider(color = secondary.copy(alpha = 0.3f))
                             Text("ذخیره‌سازی داخلی با AES-GCM و Android Keystore محافظت می‌شود.", color = secondary, fontSize = 12.sp)
                             Text("فایل پشتیبان JSON رمزنگاری نشده است؛ آن را در محل امن نگهداری کنید.", color = secondary, fontSize = 12.sp)
                             PrimaryButton("دریافت فایل پشتیبان") { exportLauncher.launch("KARBAN-backup.json") }
