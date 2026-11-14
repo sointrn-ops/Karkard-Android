@@ -4,6 +4,7 @@
         android:label="KARBAN"
         android:icon="@drawable/ic_karban_launcher"
         android:allowBackup="true"
+        android:fullBackupContent="true"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
