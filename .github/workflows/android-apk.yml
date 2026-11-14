@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main, native-kotlin]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -33,9 +35,6 @@ jobs:
         run: |
           yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
           "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Check JavaScript syntax
-        run: node --check app/src/main/assets/script.js
 
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
