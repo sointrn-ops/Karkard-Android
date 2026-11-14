@@ -1,3 +1,39 @@
+.header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .about-btn {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 17px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            transition: .2s;
+            white-space: nowrap;
+        }
+
+        .about-btn:hover {
+            background: var(--green);
+            color: #06150d;
+            border-color: var(--green);
+        }
+
+        @media (max-width: 420px) {
+            .about-btn {
+                padding: 9px 11px;
+                font-size: 12px;
+            }
+
+            .header-actions {
+                gap: 6px;
+            }
+        }
+
 :root {
     --bg: #07110e;
     --surface: #101c17;
