@@ -128,8 +128,14 @@ class MainActivity : ComponentActivity() {
     private fun readRecords(): List<WorkRecord> {
         return try {
             val raw = dataFile.openRead().bufferedReader().use { it.readText() }
-            val json = if (raw.startsWith(storagePrefix)) decrypt(raw.removePrefix(storagePrefix)) else raw
-            parseRecords(JSONArray(json))
+            val encrypted = raw.startsWith(storagePrefix)
+            val json = if (encrypted) decrypt(raw.removePrefix(storagePrefix)) else raw
+            val parsed = parseRecords(JSONArray(json))
+            if (!encrypted && raw.isNotBlank() && !writeRecords(parsed)) {
+                storageHealthy = false
+                android.util.Log.e("KARBAN", "Legacy plaintext migration could not be confirmed.")
+            }
+            parsed
         } catch (_: java.io.FileNotFoundException) {
             emptyList()
         } catch (error: Exception) {
