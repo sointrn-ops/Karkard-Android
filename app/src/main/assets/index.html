@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KARBAN</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .about-btn {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 17px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            transition: .2s;
+            white-space: nowrap;
+        }
+
+        .about-btn:hover {
+            background: var(--green);
+            color: #06150d;
+            border-color: var(--green);
+        }
+
+        @media (max-width: 420px) {
+            .about-btn {
+                padding: 9px 11px;
+                font-size: 12px;
+            }
+
+            .header-actions {
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+    <header class="app-header">
+        <div class="brand">
+            <div class="brand-logo">K</div>
+            <div>
+                <h1>KARBAN</h1>
+                <span>مدیریت هوشمند کارکرد</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button class="about-btn" type="button"
+                    onclick="openPage('about')">
+                درباره ما
+            </button>
+
+            <button id="themeBtn" class="icon-btn" title="تغییر تم">
+                ◐
+            </button>
+        </div>
+    </header>
+
+    <main class="content">
+
+        <section id="home" class="page active">
+
+            <div class="greeting">
+                <div>
+                    <span class="sub-title">YOUR WORKSPACE</span>
+                    <h2>خلاصه کارکرد</h2>
+                    <p>نگاهی به وضعیت فعالیت‌های شما</p>
+                </div>
+                <div class="today-badge" id="todayLabel">امروز</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-content">
+                    <span>مجموع مساعده‌ها</span>
+                    <h2 id="advanceTotal">۰</h2>
+                    <small>مجموع مبالغ ثبت‌شده</small>
+                </div>
+                <div class="summary-icon">↗</div>
+            </div>
+
+            <div class="mini-stats">
+                <div class="mini-card">
+                    <div class="stat-icon">▦</div>
+                    <span>روزهای ثبت‌شده</span>
+                    <strong id="dayCount">۰</strong>
+                    <small>تعداد روزهای کاری</small>
+                </div>
+
+                <div class="mini-card">
+                    <div class="stat-icon">◷</div>
+                    <span>روزهای اضافه‌کاری</span>
+                    <strong id="overtimeCount">۰</strong>
+                    <small>روز دارای اضافه‌کاری</small>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <div>
+                    <span class="sub-title">ACTIVITY</span>
+                    <h3>آخرین فعالیت‌ها</h3>
+                </div>
+                <button class="text-btn" data-goto="records">
+                    مشاهده همه ←
+                </button>
+            </div>
+
+            <div id="recentRecords" class="record-list"></div>
+
+        </section>
+
+        <section id="week" class="page">
+            <div class="section-heading">
+                <span class="sub-title">WEEKLY TRACKER</span>
+                <h2>کارکرد هفتگی</h2>
+                <p>روزهای کاری خود را بررسی و ثبت کنید.</p>
+            </div>
+
+            <div class="week-card">
+                <div class="week-header">
+                    <button id="prevWeek" class="icon-btn">‹</button>
+                    <strong id="weekTitle">این هفته</strong>
+                    <button id="nextWeek" class="icon-btn">›</button>
+                </div>
+                <div id="weekDays" class="week-days"></div>
+            </div>
+
+            <div class="section-title">
+                <h3>اطلاعات روز انتخاب‌شده</h3>
+                <button class="primary small" data-goto="add">+ ثبت اطلاعات</button>
+            </div>
+
+            <div id="selectedDayInfo" class="panel">
+                یک روز را از تقویم انتخاب کنید.
+            </div>
+        </section>
+
+        <section id="add" class="page">
+            <div class="section-heading">
+                <span class="sub-title">NEW RECORD</span>
+                <h2>ثبت کارکرد</h2>
+                <p>اطلاعات روزانه را وارد کنید.</p>
+            </div>
+
+            <form id="recordForm" class="panel">
+
+                <label for="date">تاریخ</label>
+                <div class="date-field">
+                    <input type="text" id="date" placeholder="انتخاب تاریخ شمسی" readonly required>
+                    <button type="button" id="openCalendar" class="secondary">انتخاب تاریخ</button>
+                </div>
+
+                <div class="field-heading">
+                    <label>مساعده‌ها</label>
+                    <button type="button" id="addAdvance" class="text-btn">+ افزودن مساعده</button>
+                </div>
+                <div id="advancesList"></div>
+
+                <div class="field-heading">
+                    <label>نوبت‌های اضافه‌کاری</label>
+                    <button type="button" id="addOvertime" class="text-btn">+ افزودن نوبت</button>
+                </div>
+                <div id="overtimeList"></div>
+
+                <label for="report">گزارش روزانه</label>
+                <textarea id="report" placeholder="فعالیت‌های امروز را بنویسید..."></textarea>
+
+                <button type="button" id="copyYesterday" class="secondary">
+                    کپی اطلاعات روز قبل
+                </button>
+
+                <button type="submit" class="primary save-btn">
+                    ذخیره کارکرد
+                </button>
+            </form>
+        </section>
+
+        <section id="records" class="page">
+            <div class="section-heading">
+                <span class="sub-title">ALL RECORDS</span>
+                <h2>سوابق کارکرد</h2>
+                <p>تمام اطلاعات ثبت‌شده</p>
+            </div>
+            <input id="searchInput" class="search-input"
+                   type="search" placeholder="جست‌وجو در سوابق...">
+            <div id="allRecords" class="record-list"></div>
+        </section>
+
+        <section id="reports" class="page">
+            <div class="section-heading">
+                <span class="sub-title">REPORTS</span>
+                <h2>گزارشات</h2>
+                <p>خلاصه عملکرد و اطلاعات مالی</p>
+            </div>
+            <div id="reportContent" class="report-grid"></div>
+        </section>
+
+        <section id="about" class="page">
+            <div class="section-heading">
+                <span class="sub-title">ABOUT KARBAN</span>
+                <h2>درباره برنامه</h2>
+                <p>آشنایی با کاربان و سازنده آن</p>
+            </div>
+
+            <div class="panel about-card">
+                <div class="brand-logo large">K</div>
+                <h2>KARBAN</h2>
+                <p>مدیریت هوشمند کارکرد</p>
+
+                <hr>
+
+                <h3>معرفی برنامه</h3>
+                <p>
+                    کاربان ابزاری برای ثبت و مدیریت کارکرد روزانه،
+                    مساعده، اضافه‌کاری و گزارش‌های کاری است که با
+                    هدف ساده‌تر و منظم‌تر کردن امور روزانه طراحی شده است.
+                </p>
+
+                <hr>
+
+                <h3>اطلاعات برنامه</h3>
+                <p>نسخه: 2.0 Desktop</p>
+                <p>سال انتشار: ۱۴۰۵</p>
+                <p>سازنده: محمد جواد احمدی</p>
+
+                <hr>
+
+                <h3>ارتباط با سازنده</h3>
+                <p>ایمیل: <a href="mailto:sointrn@gmail.com">sointrn@gmail.com</a></p>
+                <p>شماره تماس: <a href="tel:09017975131">09017975131</a></p>
+                <p>شماره تماس: <a href="tel:09904711802">09904711802</a></p>
+
+                <hr>
+
+                <p>
+                    کاربان؛ همراه شما برای مدیریت دقیق‌تر
+                    و آسان‌تر امور کاری.
+                </p>
+
+                <small>© ۱۴۰۵ کاربان | تمامی حقوق این برنامه محفوظ است.</small>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-page="home">
+            <span>⌂</span><small>خانه</small>
+        </button>
+        <button class="nav-item" data-page="week">
+            <span>▦</span><small>هفتگی</small>
+        </button>
+        <button class="nav-item add-nav" data-page="add">
+            <span>＋</span><small>ثبت</small>
+        </button>
+        <button class="nav-item" data-page="records">
+            <span>▤</span><small>سوابق</small>
+        </button>
+        <button class="nav-item" data-page="reports">
+            <span>▥</span><small>گزارش</small>
+        </button>
+    </nav>
+
+</div>
+
+<div id="calendarModal" class="calendar-modal" hidden>
+    <div class="calendar-box">
+        <div class="calendar-header">
+            <button type="button" id="prevMonth">ماه قبل</button>
+            <strong id="calendarTitle">ماه و سال</strong>
+            <button type="button" id="nextMonth">ماه بعد</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <button type="button" id="closeCalendar" class="secondary">بستن تقویم</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
