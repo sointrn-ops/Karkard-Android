@@ -188,6 +188,9 @@ private fun KarbanApp(
     var search by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf(if (storageHealthy) "" else "خواندن اطلاعات قبلی ممکن نشد. برای محافظت از سوابق، ذخیره‌سازی غیرفعال شده است. برنامه را حذف نکنید و فایل پشتیبان سالم را بازیابی کنید.") }
     var weekOffset by remember { mutableIntStateOf(0) }
+    var showCalendar by remember { mutableStateOf(false) }
+    var calendarYear by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).first) }
+    var calendarMonth by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).second) }
     val context = LocalContext.current
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -320,11 +323,11 @@ private fun KarbanApp(
                                     Text(persianDate(selectedDate), color = foreground, fontWeight = FontWeight.Bold)
                                 }
                                 TextButton(onClick = {
-                                    val date = LocalDate.parse(selectedDate)
-                                    DatePickerDialog(context, { _, year, month, day ->
-                                        selectedDate = LocalDate.of(year, month + 1, day).toString()
-                                    }, date.year, date.monthValue - 1, date.dayOfMonth).show()
-                                }) { Text("انتخاب تاریخ") }
+                                    val parts = jalaliParts(LocalDate.parse(selectedDate))
+                                    calendarYear = maxOf(1405, parts.first)
+                                    calendarMonth = if (parts.first < 1405) 1 else parts.second
+                                    showCalendar = true
+                                }) { Text("انتخاب تاریخ شمسی") }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("مساعده‌ها", color = foreground, fontWeight = FontWeight.Bold)
@@ -396,6 +399,54 @@ private fun KarbanApp(
                 }
             }
         }
+    }
+    if (showCalendar) {
+        val monthNames = listOf("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
+        val firstDay = jalaliToGregorian(calendarYear, calendarMonth, 1)
+        val monthLength = jalaliMonthLength(calendarYear, calendarMonth)
+        val offset = (firstDay.dayOfWeek.value + 1) % 7
+        AlertDialog(
+            onDismissRequest = { showCalendar = false },
+            title = {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = {
+                        if (calendarMonth == 1) { if (calendarYear > 1405) { calendarYear--; calendarMonth = 12 } }
+                        else calendarMonth--
+                    }, enabled = calendarYear > 1405 || calendarMonth > 1) { Text("‹") }
+                    Text("${monthNames[calendarMonth - 1]} $calendarYear", fontWeight = FontWeight.Bold)
+                    TextButton(onClick = {
+                        if (calendarMonth == 12) { calendarYear++; calendarMonth = 1 } else calendarMonth++
+                    }) { Text("›") }
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(Modifier.fillMaxWidth()) {
+                        listOf("ش", "ی", "د", "س", "چ", "پ", "ج").forEach { Text(it, Modifier.weight(1f), color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+                    }
+                    repeat(6) { week ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            repeat(7) { column ->
+                                val dayNumber = week * 7 + column - offset + 1
+                                if (dayNumber in 1..monthLength) {
+                                    val chosen = jalaliToGregorian(calendarYear, calendarMonth, dayNumber).toString() == selectedDate
+                                    TextButton(
+                                        onClick = {
+                                            selectedDate = jalaliToGregorian(calendarYear, calendarMonth, dayNumber).toString()
+                                            showCalendar = false
+                                        },
+                                        modifier = Modifier.weight(1f).height(40.dp),
+                                        contentPadding = PaddingValues(0.dp),
+                                        colors = ButtonDefaults.textButtonColors(contentColor = if (chosen) AccentBright else foreground)
+                                    ) { Text(dayNumber.toString(), fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal) }
+                                } else Spacer(Modifier.weight(1f).height(40.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showCalendar = false }) { Text("بستن") } }
+        )
     }
     if (notice.isNotBlank()) {
         AlertDialog(onDismissRequest = { notice = "" }, confirmButton = { TextButton(onClick = { notice = "" }) { Text("متوجه شدم") } }, text = { Text(notice) })
