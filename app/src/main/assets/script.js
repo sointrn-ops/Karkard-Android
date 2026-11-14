@@ -1,6 +1,7 @@
 const $ = id => document.getElementById(id);
 
 const MIN_JALALI_YEAR = 1405;
+let nativeStorageUnavailable = false;
 
 // Main records are mirrored to Android's private app storage.
 // localStorage remains as a migration/fallback copy and stores UI preferences.
@@ -17,6 +18,10 @@ function readNativeRecords() {
     try {
         if (!window.KarbanStorage || typeof window.KarbanStorage.loadRecords !== "function") return null;
         const raw = window.KarbanStorage.loadRecords();
+        if (raw === "__KARBAN_STORAGE_ERROR__") {
+            nativeStorageUnavailable = true;
+            return null;
+        }
         if (!raw) return null;
         const value = JSON.parse(raw);
         return Array.isArray(value) ? value : null;
@@ -32,8 +37,11 @@ const hasNativeStorage = Boolean(window.KarbanStorage &&
 let records = readLocalRecords();
 const nativeRecords = readNativeRecords();
 
-// Android uses app-private native storage; migrate and then remove old plaintext browser data.
-if (nativeRecords !== null) {
+// Android uses encrypted app-private storage. Never overwrite data if decryption failed.
+if (nativeStorageUnavailable) {
+    records = [];
+    setTimeout(() => alert("خواندن اطلاعات ذخیره‌شده ممکن نیست. برای جلوگیری از ازدست‌رفتن اطلاعات، برنامه را پاک نکنید و از بخش بازیابی، فایل پشتیبان معتبر را انتخاب کنید."), 300);
+} else if (nativeRecords !== null) {
     records = nativeRecords;
     if (hasNativeStorage) {
         try { localStorage.removeItem("karbanRecords"); } catch (error) {
@@ -223,6 +231,7 @@ $("exportBackupBtn").addEventListener("click", exportBackup);
 $("importBackupBtn").addEventListener("click", importBackup);
 
 function saveRecords() {
+    if (nativeStorageUnavailable) return false;
     const json = JSON.stringify(records);
     if (hasNativeStorage) {
         try {
@@ -601,9 +610,12 @@ window.importBackupFromNative = raw => {
 
         if (!confirm("با بازیابی این فایل، سوابق فعلی با اطلاعات داخل پشتیبان جایگزین می‌شوند. ادامه می‌دهید؟")) return;
         const previousRecords = records;
+        const previousUnavailable = nativeStorageUnavailable;
         records = restored;
+        nativeStorageUnavailable = false;
         if (!saveRecords()) {
             records = previousRecords;
+            nativeStorageUnavailable = previousUnavailable;
             alert("ذخیره اطلاعات بازیابی‌شده ناموفق بود. سوابق قبلی حفظ شدند.");
             return;
         }
