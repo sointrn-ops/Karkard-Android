@@ -26,18 +26,26 @@ function readNativeRecords() {
     }
 }
 
+const hasNativeStorage = Boolean(window.KarbanStorage &&
+    typeof window.KarbanStorage.loadRecords === "function" &&
+    typeof window.KarbanStorage.saveRecords === "function");
 let records = readLocalRecords();
 const nativeRecords = readNativeRecords();
 
-// On Android, the native copy wins when it exists. On first launch,
-// existing browser records are migrated into native private storage.
+// Android uses app-private native storage; migrate and then remove old plaintext browser data.
 if (nativeRecords !== null) {
     records = nativeRecords;
-    try { localStorage.setItem("karbanRecords", JSON.stringify(records)); } catch (error) {
-        console.error("Local fallback update failed:", error);
+    if (hasNativeStorage) {
+        try { localStorage.removeItem("karbanRecords"); } catch (error) {
+            console.error("Legacy local data cleanup failed:", error);
+        }
     }
-} else if (records.length && window.KarbanStorage) {
-    try { window.KarbanStorage.saveRecords(JSON.stringify(records)); } catch (error) {
+} else if (records.length && hasNativeStorage) {
+    try {
+        if (window.KarbanStorage.saveRecords(JSON.stringify(records))) {
+            localStorage.removeItem("karbanRecords");
+        }
+    } catch (error) {
         console.error("Initial native migration failed:", error);
     }
 }
@@ -213,28 +221,23 @@ document.querySelectorAll(".nav-item").forEach(button => {
 
 function saveRecords() {
     const json = JSON.stringify(records);
-    let localSaved = false;
-    let nativeSaved = null;
-
-    // Keep a browser-side fallback and a durable native copy on Android.
-    try {
-        localStorage.setItem("karbanRecords", json);
-        localSaved = true;
-    } catch (error) {
-        console.error("Local storage write failed:", error);
-    }
-
-    if (window.KarbanStorage && typeof window.KarbanStorage.saveRecords === "function") {
+    if (hasNativeStorage) {
         try {
-            nativeSaved = Boolean(window.KarbanStorage.saveRecords(json));
-            if (!nativeSaved) console.error("Native storage did not confirm the save.");
+            const saved = Boolean(window.KarbanStorage.saveRecords(json));
+            if (!saved) console.error("Native private storage did not confirm the save.");
+            return saved;
         } catch (error) {
-            nativeSaved = false;
             console.error("Native storage write failed:", error);
+            return false;
         }
     }
-
-    return nativeSaved === null ? localSaved : nativeSaved;
+    try {
+        localStorage.setItem("karbanRecords", json);
+        return true;
+    } catch (error) {
+        console.error("Local storage write failed:", error);
+        return false;
+    }
 }
 
 function formatNumber(value) {
