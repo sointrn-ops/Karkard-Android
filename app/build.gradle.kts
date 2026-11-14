@@ -12,8 +12,8 @@ android {
         applicationId = "ir.example.karkard"
         minSdk = 23
         targetSdk = 35
-        versionCode = 6
-        versionName = "2.2"
+        versionCode = 7
+        versionName = "2.3"
     }
 
     compileOptions {
