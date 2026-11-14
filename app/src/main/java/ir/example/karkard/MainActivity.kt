@@ -405,31 +405,113 @@ private fun KarbanApp(
                         }
                     }
                     "week" -> {
-                        Heading("کارکرد هفتگی", "روزهای کاری خود را بررسی و ثبت کنید.", foreground, secondary)
-                        val start = weekStart(LocalDate.now()).plusWeeks(weekOffset.toLong())
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { weekOffset-- }) { Text("‹ هفته قبل") }
-                            TextButton(onClick = { weekOffset++ }) { Text("هفته بعد ›") }
+                        val today = LocalDate.now()
+                        val start = weekStart(today).plusWeeks(weekOffset.toLong())
+                        val end = start.plusDays(6)
+                        val startJ = jalaliParts(start)
+                        val weekRecords = records.filter {
+                            val date = LocalDate.parse(it.date)
+                            !date.isBefore(start) && !date.isAfter(end)
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            (0..6).forEach { index ->
-                                val day = start.plusDays(index.toLong())
-                                Column(
-                                    Modifier.weight(1f).background(if (selectedDate == day.toString()) Accent else alternate, RoundedCornerShape(10.dp))
-                                        .clickable { selectedDate = day.toString() }.padding(vertical = 11.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(listOf("ش", "ی", "د", "س", "چ", "پ", "ج")[index], color = if (selectedDate == day.toString()) AppBg else secondary, fontSize = 10.sp)
-                                    Text(day.dayOfMonth.toString(), color = if (selectedDate == day.toString()) AppBg else foreground, fontWeight = FontWeight.Bold)
-                                    if (records.any { it.date == day.toString() }) Box(Modifier.padding(top = 4.dp).size(4.dp).background(if (selectedDate == day.toString()) AppBg else Accent, RoundedCornerShape(50)))
+                        val selectedRecords = records.filter { it.date == selectedDate }
+                        val selectedTotalAdvance = total(selectedRecords.flatMap { it.advances }).toLong()
+                        val selectedTotalOvertime = total(selectedRecords.flatMap { it.overtimes })
+
+                        Heading("تقویم هفتگی", "نمای کامل روزها و جزئیات کارکرد", foreground, secondary)
+
+                        Panel(surface) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                TextButton(
+                                    onClick = {
+                                        weekOffset--
+                                        selectedDate = start.minusWeeks(1).toString()
+                                    },
+                                    enabled = startJ.first > 1405 || startJ.second > 1 || startJ.third > 1
+                                ) { Text("‹ هفته قبل") }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("هفته ${startJ.third} ${listOf("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")[startJ.second - 1]}", color = foreground, fontWeight = FontWeight.Bold)
+                                    Text("${persianDate(start.toString())}  تا  ${persianDate(end.toString())}", color = secondary, fontSize = 10.sp)
+                                }
+                                TextButton(onClick = {
+                                    weekOffset++
+                                    selectedDate = start.plusWeeks(1).toString()
+                                }) { Text("هفته بعد ›") }
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                (0..6).forEach { index ->
+                                    val day = start.plusDays(index.toLong())
+                                    val dayRecords = records.filter { it.date == day.toString() }
+                                    val isSelected = selectedDate == day.toString()
+                                    val isToday = day == today
+                                    val dayName = listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")[index]
+                                    Column(
+                                        Modifier.weight(1f)
+                                            .background(
+                                                when {
+                                                    isSelected -> Accent
+                                                    isToday -> Accent.copy(alpha = 0.18f)
+                                                    else -> alternate
+                                                },
+                                                RoundedCornerShape(13.dp)
+                                            )
+                                            .clickable { selectedDate = day.toString() }
+                                            .padding(vertical = 10.dp, horizontal = 2.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Text(dayName.take(1), color = if (isSelected) AppBg else secondary, fontSize = 10.sp)
+                                        Text(jalaliParts(day).third.toString(), color = if (isSelected) AppBg else foreground, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                                        Box(
+                                            Modifier.size(6.dp).background(
+                                                when {
+                                                    isSelected && dayRecords.isNotEmpty() -> AppBg
+                                                    dayRecords.isNotEmpty() -> AccentBright
+                                                    else -> Color.Transparent
+                                                },
+                                                RoundedCornerShape(50.dp)
+                                            )
+                                        )
+                                        if (isToday) Text("امروز", color = if (isSelected) AppBg else AccentBright, fontSize = 8.sp)
+                                    }
                                 }
                             }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("روزهای ثبت‌شده: ${weekRecords.map { it.date }.distinct().size}", color = secondary, fontSize = 11.sp)
+                                Text("اضافه‌کاری: ${total(weekRecords.flatMap { it.overtimes })} ساعت", color = AccentBright, fontSize = 11.sp)
+                            }
                         }
-                        Text("تاریخ انتخاب‌شده: ${persianDate(selectedDate)}", color = AccentBright, modifier = Modifier.padding(vertical = 13.dp))
-                        records.filter { it.date == selectedDate }.forEach { record ->
-                            RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
+
+                        Text("جزئیات روز انتخاب‌شده", color = foreground, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(top = 5.dp, bottom = 8.dp))
+                        Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                            Text(persianDate(selectedDate), color = AccentBright, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                            if (selectedRecords.isEmpty()) {
+                                Column(
+                                    Modifier.fillMaxWidth().background(alternate, RoundedCornerShape(14.dp)).padding(18.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                                ) {
+                                    Text("برای این روز هنوز کارکردی ثبت نشده", color = foreground, fontWeight = FontWeight.Bold)
+                                    Text("می‌توانی همین‌جا اطلاعات این روز را ثبت کنی.", color = secondary, fontSize = 11.sp)
+                                }
+                            } else {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(Modifier.weight(1f).background(alternate, RoundedCornerShape(13.dp)).padding(12.dp)) {
+                                        Text("مساعده", color = secondary, fontSize = 11.sp)
+                                        Text(selectedTotalAdvance.toString(), color = foreground, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                                    }
+                                    Column(Modifier.weight(1f).background(alternate, RoundedCornerShape(13.dp)).padding(12.dp)) {
+                                        Text("اضافه‌کاری", color = secondary, fontSize = 11.sp)
+                                        Text("$selectedTotalOvertime ساعت", color = AccentBright, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                                    }
+                                }
+                                selectedRecords.forEach { record ->
+                                    RecordCard(record, alternate, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
+                                }
+                            }
+                            PrimaryButton(if (selectedRecords.isEmpty()) "＋ ثبت کارکرد این روز" else "＋ افزودن / ثبت مجدد این روز") {
+                                beginNew(selectedDate)
+                            }
                         }
-                        PrimaryButton("＋ ثبت اطلاعات این روز") { beginNew(selectedDate) }
                     }
                     "add" -> {
                         Heading(if (editingId == null) "ثبت کارکرد" else "ویرایش کارکرد", "اطلاعات روزانه را وارد کنید.", foreground, secondary)
