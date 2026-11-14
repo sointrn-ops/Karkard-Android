@@ -51,7 +51,7 @@ private val CardAlt = Color(0xFF17251E)
 private val Muted = Color(0xFF91A399)
 private val MainText = Color(0xFFF1F7F3)
 
-data class WorkItem(val title: String, val value: Double)
+data class WorkItem(val title: String, val value: Double, val amount: Double = 0.0)
 data class WorkRecord(val id: String, val date: String, val advances: List<WorkItem>, val overtimes: List<WorkItem>, val report: String)
 
 class MainActivity : ComponentActivity() {
@@ -103,8 +103,9 @@ class MainActivity : ComponentActivity() {
                 return (0 until items.length()).map { n ->
                     val item = items.getJSONObject(n)
                     val value = item.optDouble("value")
-                    require(value.isFinite() && value >= 0)
-                    WorkItem(item.optString("title").take(200), value)
+                    val amount = item.optDouble("amount", 0.0)
+                    require(value.isFinite() && value >= 0 && amount.isFinite() && amount >= 0)
+                    WorkItem(item.optString("title").take(200), value, amount)
                 }
             }
             val id = obj.optString("id")
@@ -119,7 +120,7 @@ class MainActivity : ComponentActivity() {
         val array = JSONArray()
         records.forEach { record ->
             fun items(list: List<WorkItem>) = JSONArray().also { out ->
-                list.forEach { out.put(JSONObject().put("title", it.title).put("value", it.value)) }
+                list.forEach { out.put(JSONObject().put("title", it.title).put("value", it.value).put("amount", it.amount)) }
             }
             array.put(JSONObject().put("id", record.id).put("date", record.date)
                 .put("advances", items(record.advances)).put("overtimes", items(record.overtimes))
@@ -540,7 +541,20 @@ private fun KarbanApp(
                                 Text("اضافه‌کاری", color = foreground, fontWeight = FontWeight.Bold)
                                 TextButton(onClick = { overtimes = overtimes + WorkItem("", 0.0) }) { Text("+ افزودن") }
                             }
-                            ItemEditor(overtimes, "عنوان نوبت", "ساعت", alternate) { overtimes = it }
+                            Text("برای هر مورد، ساعت و مبلغ را جداگانه وارد کنید.", color = secondary, fontSize = 10.sp)
+                            OvertimeEditor(overtimes, alternate) { overtimes = it }
+                            val overtimeHours = overtimes.sumOf { it.value }
+                            val overtimeMoney = overtimes.sumOf { it.amount }
+                            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f).background(alternate, RoundedCornerShape(12.dp)).padding(12.dp)) {
+                                    Text("جمع ساعت", color = secondary, fontSize = 10.sp)
+                                    Text("$overtimeHours ساعت", color = AccentBright, fontWeight = FontWeight.Bold)
+                                }
+                                Column(Modifier.weight(1f).background(alternate, RoundedCornerShape(12.dp)).padding(12.dp)) {
+                                    Text("جمع مبلغ", color = secondary, fontSize = 10.sp)
+                                    Text(overtimeMoney.toLong().toString(), color = AccentBright, fontWeight = FontWeight.Bold)
+                                }
+                            }
                             Text("گزارش روزانه", color = secondary, fontSize = 12.sp)
                             OutlinedTextField(report, { report = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("فعالیت‌های امروز را بنویسید...") })
                             TextButton(onClick = {
@@ -558,7 +572,7 @@ private fun KarbanApp(
                                 val record = WorkRecord(
                                     editingId ?: System.currentTimeMillis().toString(), selectedDate,
                                     advances.filter { it.title.isNotBlank() || it.value > 0 },
-                                    overtimes.filter { it.title.isNotBlank() || it.value > 0 }, report
+                                    overtimes.filter { it.title.isNotBlank() || it.value > 0 || it.amount > 0 }, report
                                 )
                                 val next = if (editingId == null) records + record else records.map { if (it.id == editingId) record else it }
                                 if (saveRecords(next)) {
@@ -673,6 +687,7 @@ private fun KarbanApp(
                         Metric("روزهای دارای اضافه‌کاری", records.count { total(it.overtimes) > 0 }.toString(), surface, secondary, Modifier.fillMaxWidth())
                         Metric("مجموع مساعده‌ها", total(records.flatMap { it.advances }).toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
                         Metric("مجموع ساعت اضافه‌کاری", total(records.flatMap { it.overtimes }).toString(), surface, secondary, Modifier.fillMaxWidth())
+                        Metric("مجموع مبلغ اضافه‌کاری", records.sumOf { day -> day.overtimes.sumOf { it.amount } }.toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
                     }
                     "about" -> {
                         val context = LocalContext.current
@@ -916,11 +931,28 @@ private fun ItemEditor(items: List<WorkItem>, titleHint: String, valueHint: Stri
     }
 }
 @Composable
+private fun OvertimeEditor(items: List<WorkItem>, background: Color, onChange: (List<WorkItem>) -> Unit) {
+    items.forEachIndexed { index, item ->
+        Column(Modifier.fillMaxWidth().padding(bottom = 8.dp).background(background, RoundedCornerShape(14.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("مورد اضافه‌کاری ${index + 1}", color = AccentBright, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { onChange(items.toMutableList().also { it.removeAt(index) }.ifEmpty { listOf(WorkItem("", 0.0)) }) }) { Text("حذف", color = Color(0xFFED6262)) }
+            }
+            OutlinedTextField(value = item.title, onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(title = value) }) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("عنوان یا توضیح اضافه‌کاری") }, singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = if (item.value == 0.0) "" else item.value.toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(value = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("ساعت") }, label = { Text("مدت (ساعت)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                OutlinedTextField(value = if (item.amount == 0.0) "" else item.amount.toLong().toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(amount = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("مبلغ") }, label = { Text("مبلغ (تومان)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+            }
+        }
+    }
+}
+@Composable
 private fun RecordCard(record: WorkRecord, surface: Color, foreground: Color, muted: Color, actions: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
     Panel(surface) {
         Text(persianDate(record.date), color = AccentBright, fontWeight = FontWeight.Bold)
         Text("مجموع مساعده: ${record.advances.sumOf { it.value }.toLong()}", color = muted, fontSize = 12.sp)
         Text("مجموع اضافه‌کاری: ${record.overtimes.sumOf { it.value }} ساعت", color = muted, fontSize = 12.sp)
+        Text("مبلغ اضافه‌کاری: ${record.overtimes.sumOf { it.amount }.toLong()}", color = muted, fontSize = 12.sp)
         if (record.report.isNotBlank()) Text("گزارش: ${record.report}", color = foreground, fontSize = 12.sp)
         if (actions) Row {
             TextButton(onClick = onEdit) { Text("ویرایش") }
