@@ -3,7 +3,7 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:label="KARBAN"
         android:icon="@drawable/ic_karban_launcher"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
