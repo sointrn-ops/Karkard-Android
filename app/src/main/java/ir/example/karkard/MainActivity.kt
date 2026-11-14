@@ -16,12 +16,8 @@ class MainActivity : ComponentActivity() {
 
     inner class KarbanStorage {
         @JavascriptInterface
-        fun hasSavedRecords(): Boolean = recordsFile.baseFile.exists()
-
-        @JavascriptInterface
         fun loadRecords(): String {
             return try {
-                if (!recordsFile.baseFile.exists()) return ""
                 recordsFile.openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
             } catch (_: Exception) {
                 ""
