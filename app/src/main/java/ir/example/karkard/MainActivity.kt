@@ -273,20 +273,40 @@ private fun KarbanApp(
             }
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 17.dp)) {
-                Row(Modifier.fillMaxWidth().padding(vertical = 13.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .padding(top = 9.dp, bottom = 13.dp)
+                        .background(surface, RoundedCornerShape(20.dp))
+                        .padding(horizontal = 13.dp, vertical = 11.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(43.dp).background(Accent, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                        Box(
+                            Modifier.size(42.dp).background(Accent, RoundedCornerShape(14.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text("K", color = AppBg, fontSize = 25.sp, fontWeight = FontWeight.Black)
                         }
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(9.dp))
                         Column {
                             Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                            Text("مدیریت هوشمند کارکرد", color = secondary, fontSize = 11.sp)
+                            Text("مدیریت هوشمند کارکرد", color = secondary, fontSize = 10.sp)
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("درباره", color = AccentBright, modifier = Modifier.clickable { page = "about" }.padding(8.dp))
-                        Text(if (isLight) "☾" else "☀", color = foreground, fontSize = 20.sp, modifier = Modifier.clickable { isLight = !isLight; saveTheme(isLight) }.padding(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("امروز", color = secondary, fontSize = 10.sp)
+                            Text(persianDate(LocalDate.now().toString()), color = foreground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(Modifier.width(5.dp))
+                        Text("درباره", color = AccentBright, fontSize = 12.sp, modifier = Modifier.clickable { page = "about" }.padding(horizontal = 5.dp, vertical = 8.dp))
+                        Text(
+                            if (isLight) "☾" else "☀",
+                            color = foreground,
+                            fontSize = 20.sp,
+                            modifier = Modifier.clickable { isLight = !isLight; saveTheme(isLight) }.padding(5.dp)
+                        )
                     }
                 }
 
