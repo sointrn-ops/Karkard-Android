@@ -744,14 +744,14 @@ private fun KarbanApp(
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("تماس با 09904711802") }
-                            Text("شماره تماس دوم: 09077975131", color = foreground)
+                            Text("شماره تماس دوم: 09017975131", color = foreground)
                             OutlinedButton(
                                 onClick = {
-                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:09077975131"))
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:09017975131"))
                                     runCatching { context.startActivity(intent) }
                                 },
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("تماس با 09077975131") }
+                            ) { Text("تماس با 09017975131") }
                             Divider(color = secondary.copy(alpha = 0.3f))
                             Text("ذخیره‌سازی داخلی با AES-GCM و Android Keystore محافظت می‌شود.", color = secondary, fontSize = 12.sp)
                             Text("فایل پشتیبان JSON رمزنگاری نشده است؛ آن را در محل امن نگهداری کنید.", color = secondary, fontSize = 12.sp)
