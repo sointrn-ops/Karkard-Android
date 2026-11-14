@@ -24,8 +24,13 @@ function readNativeRecords() {
         }
         if (!raw) return null;
         const value = JSON.parse(raw);
-        return Array.isArray(value) ? value : null;
+        if (!Array.isArray(value)) {
+            nativeStorageUnavailable = true;
+            return null;
+        }
+        return value;
     } catch (error) {
+        nativeStorageUnavailable = true;
         console.error("Native storage read failed:", error);
         return null;
     }
