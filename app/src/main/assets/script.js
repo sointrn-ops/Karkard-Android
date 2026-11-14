@@ -2,13 +2,44 @@ const $ = id => document.getElementById(id);
 
 const MIN_JALALI_YEAR = 1405;
 
-let records = [];
+// Main records are mirrored to Android's private app storage.
+// localStorage remains as a migration/fallback copy and stores UI preferences.
+function readLocalRecords() {
+    try {
+        const value = JSON.parse(localStorage.getItem("karbanRecords") || "[]");
+        return Array.isArray(value) ? value : [];
+    } catch {
+        return [];
+    }
+}
 
-try {
-    records = JSON.parse(localStorage.getItem("karbanRecords") || "[]");
-    if (!Array.isArray(records)) records = [];
-} catch {
-    records = [];
+function readNativeRecords() {
+    try {
+        if (!window.KarbanStorage || typeof window.KarbanStorage.loadRecords !== "function") return null;
+        const raw = window.KarbanStorage.loadRecords();
+        if (!raw) return null;
+        const value = JSON.parse(raw);
+        return Array.isArray(value) ? value : null;
+    } catch (error) {
+        console.error("Native storage read failed:", error);
+        return null;
+    }
+}
+
+let records = readLocalRecords();
+const nativeRecords = readNativeRecords();
+
+// On Android, the native copy wins when it exists. On first launch,
+// existing browser records are migrated into native private storage.
+if (nativeRecords !== null) {
+    records = nativeRecords;
+    try { localStorage.setItem("karbanRecords", JSON.stringify(records)); } catch (error) {
+        console.error("Local fallback update failed:", error);
+    }
+} else if (records.length && window.KarbanStorage) {
+    try { window.KarbanStorage.saveRecords(JSON.stringify(records)); } catch (error) {
+        console.error("Initial native migration failed:", error);
+    }
 }
 
 let selectedDate = "";
@@ -181,7 +212,23 @@ document.querySelectorAll(".nav-item").forEach(button => {
 });
 
 function saveRecords() {
-    localStorage.setItem("karbanRecords", JSON.stringify(records));
+    const json = JSON.stringify(records);
+
+    // Keep a browser-side fallback and a durable native copy on Android.
+    try {
+        localStorage.setItem("karbanRecords", json);
+    } catch (error) {
+        console.error("Local storage write failed:", error);
+    }
+
+    if (window.KarbanStorage && typeof window.KarbanStorage.saveRecords === "function") {
+        try {
+            const saved = window.KarbanStorage.saveRecords(json);
+            if (!saved) console.error("Native storage did not confirm the save.");
+        } catch (error) {
+            console.error("Native storage write failed:", error);
+        }
+    }
 }
 
 function formatNumber(value) {
