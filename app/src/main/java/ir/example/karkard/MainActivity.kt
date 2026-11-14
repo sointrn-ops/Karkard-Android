@@ -753,7 +753,8 @@ private fun KarbanApp(
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("تماس با 09017975131") }
                             Divider(color = secondary.copy(alpha = 0.3f))
-                            Text("امکانات: داشبورد، ثبت روزانه، تقویم شمسی، نمای هفتگی، آرشیو و جست‌وجوی سوابق، گزارش عملکرد و مدیریت پشتیبان.", color = foreground, fontSize = 12.sp)\n                            Text("ذخیره‌سازی داخلی با AES-GCM و Android Keystore محافظت می‌شود.", color = secondary, fontSize = 12.sp)
+                            Text("امکانات: داشبورد، ثبت روزانه، تقویم شمسی، نمای هفتگی، آرشیو و جست‌وجوی سوابق، گزارش عملکرد و مدیریت پشتیبان.", color = foreground, fontSize = 12.sp)
+                            Text("ذخیره‌سازی داخلی با AES-GCM و Android Keystore محافظت می‌شود.", color = secondary, fontSize = 12.sp)
                             Text("فایل پشتیبان JSON رمزنگاری نشده است؛ آن را در محل امن نگهداری کنید.", color = secondary, fontSize = 12.sp)
                             PrimaryButton("دریافت فایل پشتیبان") { exportLauncher.launch("KARBAN-backup.json") }
                             OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json")) }, modifier = Modifier.fillMaxWidth()) { Text("بازیابی از فایل") }
