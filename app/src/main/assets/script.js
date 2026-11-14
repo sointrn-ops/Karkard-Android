@@ -218,6 +218,9 @@ document.querySelectorAll("[data-goto]").forEach(button => {
 document.querySelectorAll(".nav-item").forEach(button => {
     button.addEventListener("click", () => openPage(button.dataset.page));
 });
+$("aboutBtn").addEventListener("click", () => openPage("about"));
+$("exportBackupBtn").addEventListener("click", exportBackup);
+$("importBackupBtn").addEventListener("click", importBackup);
 
 function saveRecords() {
     const json = JSON.stringify(records);
