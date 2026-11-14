@@ -8,6 +8,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import android.util.AtomicFile
@@ -80,6 +82,18 @@ class MainActivity : ComponentActivity() {
 
     private var pendingBackupJson: String? = null
 
+    private fun handleAppNavigation(url: String): Boolean {
+        if (url.startsWith("file:///android_asset/")) return false
+        if (url.startsWith("mailto:") || url.startsWith("tel:")) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (_: Exception) {
+                // No compatible external app.
+            }
+        }
+        return true
+    }
+
     @Suppress("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,10 +104,23 @@ class MainActivity : ComponentActivity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
-            settings.allowContentAccess = true
+            settings.allowContentAccess = false
+            settings.allowFileAccessFromFileURLs = false
+            settings.allowUniversalAccessFromFileURLs = false
+            settings.blockNetworkLoads = true
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.javaScriptCanOpenWindowsAutomatically = false
             addJavascriptInterface(KarbanStorage(), "KarbanStorage")
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    return handleAppNavigation(request.url.toString())
+                }
+
+                @Suppress("DEPRECATION")
+                override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+                    return handleAppNavigation(url)
+                }
+            }
             webChromeClient = WebChromeClient()
             loadUrl("file:///android_asset/index.html")
         }
