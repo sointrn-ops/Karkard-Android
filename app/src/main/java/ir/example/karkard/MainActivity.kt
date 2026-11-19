@@ -395,16 +395,7 @@ private fun KarbanApp(
                             }
                             Panel(surface, Modifier.padding(top = 12.dp)) {
                                 Text("خلاصه مالی ماه جاری", color = foreground, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("مبلغ اضافه‌کاری", color = secondary, fontSize = 10.sp)
-                                        Text("${monthOvertimeMoney} تومان", color = AccentBright, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                    Column(Modifier.weight(1f)) {
-                                        Text("مانده پس از مساعده", color = secondary, fontSize = 10.sp)
-                                        Text("${monthBalance} تومان", color = if (monthBalance >= 0) AccentBright else Color(0xFFFF8A80), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
+                                Text("مبلغ اضافه‌کاری: ${monthOvertimeMoney} تومان", color = AccentBright, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 Text("جمع ساعات اضافه‌کاری: $monthOvertime ساعت", color = secondary, fontSize = 11.sp)
                             }
                             Panel(surface) {
@@ -584,7 +575,6 @@ private fun KarbanApp(
                                 Column(Modifier.weight(1f)) { Text("ساعت اضافه‌کاری", color = secondary, fontSize = 10.sp); Text("$weekOvertimeTotal ساعت", color = AccentBright, fontWeight = FontWeight.Bold) }
                             }
                             Text("مبلغ اضافه‌کاری: $weekOvertimeMoney تومان", color = secondary, fontSize = 11.sp)
-                            Text("مانده پس از کسر مساعده: ${weekOvertimeMoney - weekAdvanceTotal} تومان", color = foreground, fontWeight = FontWeight.Bold)
                         }
                         Text("جزئیات روز انتخاب‌شده", color = foreground, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(top = 5.dp, bottom = 8.dp))
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -650,9 +640,8 @@ private fun KarbanApp(
                                 Text("اضافه‌کاری", color = foreground, fontWeight = FontWeight.Bold)
                                 TextButton(onClick = { overtimes = overtimes + WorkItem("", 0.0) }) { Text("+ افزودن") }
                             }
-                            val configuredHourlyRate = (monthlySalaryText.toDoubleOrNull() ?: 0.0) / (monthlyHoursText.toDoubleOrNull()?.takeIf { it > 0 } ?: 220.0)
-                            Text(if (configuredHourlyRate > 0) "مبلغ با نرخ ساعتی ${configuredHourlyRate.toLong()} تومان و ضریب ${overtimeMultiplierText} محاسبه می‌شود؛ امکان ویرایش دستی وجود دارد." else "برای محاسبه خودکار، حقوق ماهانه و ساعت موظفی را در تنظیمات وارد کنید.", color = secondary, fontSize = 10.sp)
-                            OvertimeEditor(overtimes, alternate, configuredHourlyRate, overtimeMultiplierText.toDoubleOrNull() ?: 1.4) { overtimes = it }
+                            Text("ساعت و مبلغ اضافه‌کاری را خودت برای همین روز وارد کن؛ برنامه آن‌ها را در گزارش هفتگی و ماهانه جمع می‌زند.", color = secondary, fontSize = 10.sp)
+                            OvertimeEditor(overtimes, alternate, 0.0, 1.0) { overtimes = it }
                             val overtimeHours = overtimes.sumOf { it.value }
                             val overtimeMoney = overtimes.sumOf { it.amount }
                             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -823,7 +812,6 @@ private fun KarbanApp(
                                         }
                                     }
                                     Text("مبلغ اضافه‌کاری: $monthOvertimeMoney تومان", color = secondary, fontSize = 11.sp)
-                                    Text("مانده پس از کسر مساعده: ${monthOvertimeMoney - monthAdvance} تومان", color = foreground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -1118,10 +1106,10 @@ private fun OvertimeEditor(items: List<WorkItem>, background: Color, hourlyRate:
             }
             OutlinedTextField(value = item.title, onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(title = value) }) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("عنوان یا توضیح اضافه‌کاری") }, singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = if (item.value == 0.0) "" else item.value.toString(), onValueChange = { value -> val hours = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0; val autoAmount = if (hourlyRate > 0 && multiplier > 0) (hours * hourlyRate * multiplier).toLong().toDouble() else item.amount; onChange(items.toMutableList().also { it[index] = item.copy(value = hours, amount = autoAmount) }) }, modifier = Modifier.weight(1f), placeholder = { Text("ساعت") }, label = { Text("مدت (ساعت)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                OutlinedTextField(value = if (item.value == 0.0) "" else item.value.toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(value = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("ساعت") }, label = { Text("مدت (ساعت)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
                 OutlinedTextField(value = if (item.amount == 0.0) "" else item.amount.toLong().toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(amount = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("مبلغ") }, label = { Text("مبلغ (تومان)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
             }
-            Text("مبلغ به‌صورت خودکار از روی ساعت و تنظیمات حقوق محاسبه می‌شود؛ در صورت نیاز می‌توانی آن را دستی اصلاح کنی.", color = Muted, fontSize = 10.sp)
+            Text("مبلغ اضافه‌کاری را خودت وارد کن؛ جمع ماهانه و هفتگی به‌صورت خودکار محاسبه می‌شود.", color = Muted, fontSize = 10.sp)
         }
     }
 }
@@ -1143,7 +1131,6 @@ private fun RecordCard(record: WorkRecord, surface: Color, foreground: Color, mu
             }
         }
         Text("مبلغ اضافه‌کاری: ${record.overtimes.sumOf { it.amount }.toLong()} تومان", color = muted, fontSize = 11.sp)
-        Text("مانده روز: ${(record.overtimes.sumOf { it.amount } - record.advances.sumOf { it.value }).toLong()} تومان", color = AccentBright, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         if (record.report.isNotBlank()) Text(record.report, color = foreground, fontSize = 12.sp)
         if (actions) Row {
             TextButton(onClick = onEdit) { Text("ویرایش", fontWeight = FontWeight.Bold) }
