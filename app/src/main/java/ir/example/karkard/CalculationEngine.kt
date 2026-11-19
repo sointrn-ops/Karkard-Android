@@ -44,6 +44,16 @@ data class OvertimeResult(
 )
 
 object CalculationEngine {
+    /** Parses a duration in H:mm or HH:mm form; hours may exceed 23. */
+    fun durationMinutes(value: String): Int {
+        val parts = value.split(":")
+        require(parts.size == 2)
+        val hours = parts[0].toInt()
+        val minutes = parts[1].toInt()
+        require(hours in 0..999 && minutes in 0..59)
+        return Math.addExact(Math.multiplyExact(hours, 60), minutes)
+    }
+
     /**
      * Calculates elapsed work time between local HH:mm values.
      * Overnight shifts are supported. Breaks are supplied as whole minutes.
