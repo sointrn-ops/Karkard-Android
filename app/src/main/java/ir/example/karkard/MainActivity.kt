@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -43,13 +44,14 @@ import javax.crypto.spec.GCMParameterSpec
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 
-private val Accent = Color(0xFF31C47B)
-private val AccentBright = Color(0xFF62DFA0)
-private val AppBg = Color(0xFF07110E)
-private val CardBg = Color(0xFF101C17)
-private val CardAlt = Color(0xFF17251E)
-private val Muted = Color(0xFF91A399)
-private val MainText = Color(0xFFF1F7F3)
+private val Accent = Color(0xFF39D99A)
+private val AccentBright = Color(0xFF75F0BB)
+private val AppBg = Color(0xFF080D13)
+private val CardBg = Color(0xFF111923)
+private val CardAlt = Color(0xFF1A2632)
+private val Muted = Color(0xFF91A1B2)
+private val MainText = Color(0xFFF1F5F9)
+private val Outline = Color(0xFF263545)
 
 data class WorkItem(val title: String, val value: Double, val amount: Double = 0.0)
 data class WorkRecord(val id: String, val date: String, val advances: List<WorkItem>, val overtimes: List<WorkItem>, val report: String)
@@ -250,11 +252,11 @@ private fun KarbanApp(
         }
     }
 
-    val background = if (isLight) Color(0xFFF1F5F2) else AppBg
+    val background = if (isLight) Color(0xFFF3F6F8) else AppBg
     val surface = if (isLight) Color.White else CardBg
-    val alternate = if (isLight) Color(0xFFEAF1EC) else CardAlt
-    val foreground = if (isLight) Color(0xFF14231A) else MainText
-    val secondary = if (isLight) Color(0xFF65766B) else Muted
+    val alternate = if (isLight) Color(0xFFEAF0F3) else CardAlt
+    val foreground = if (isLight) Color(0xFF17232D) else MainText
+    val secondary = if (isLight) Color(0xFF687887) else Muted
 
     fun total(items: List<WorkItem>) = items.sumOf { it.value }
     fun persist(next: List<WorkRecord>) {
@@ -281,38 +283,44 @@ private fun KarbanApp(
         Scaffold(
             containerColor = background,
             bottomBar = {
-                NavigationBar(containerColor = surface) {
+                NavigationBar(
+                    containerColor = surface,
+                    tonalElevation = 0.dp,
+                    modifier = Modifier.border(1.dp, if (isLight) Color(0xFFE2E8EC) else Outline.copy(alpha = 0.8f))
+                ) {
                     listOf("home" to "خانه", "week" to "هفتگی", "add" to "ثبت", "records" to "سوابق", "reports" to "گزارش").forEach { (key, label) ->
                         NavigationBarItem(
                             selected = page == key,
                             onClick = { if (key == "add") beginNew() else page = key },
-                            icon = { Text(when (key) { "home" -> "⌂"; "week" -> "▦"; "add" -> "＋"; "records" -> "≡"; else -> "▤" }, fontSize = 19.sp) },
-                            label = { Text(label) }
+                            icon = { Text(when (key) { "home" -> "⌂"; "week" -> "▦"; "add" -> "＋"; "records" -> "≡"; else -> "▤" }, fontSize = if (page == key) 21.sp else 19.sp, fontWeight = FontWeight.Bold) },
+                            label = { Text(label, fontSize = 10.sp, fontWeight = if (page == key) FontWeight.Bold else FontWeight.Medium) },
+                            colors = NavigationBarItemDefaults.colors(selectedIconColor = AccentBright, selectedTextColor = AccentBright, indicatorColor = Accent.copy(alpha = 0.15f), unselectedIconColor = secondary, unselectedTextColor = secondary)
                         )
                     }
                 }
             }
         ) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 17.dp)) {
+            Column(Modifier.fillMaxSize().background(background).padding(padding).padding(horizontal = 18.dp)) {
                 Row(
                     Modifier.fillMaxWidth()
-                        .padding(top = 9.dp, bottom = 13.dp)
+                        .padding(top = 12.dp, bottom = 15.dp)
+                        .border(1.dp, if (isLight) Color(0xFFE3E9ED) else Outline, RoundedCornerShape(20.dp))
                         .background(surface, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 13.dp, vertical = 11.dp),
+                        .padding(horizontal = 15.dp, vertical = 13.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            Modifier.size(42.dp).background(Accent, RoundedCornerShape(14.dp)),
+                            Modifier.size(44.dp).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(AccentBright, Accent)), RoundedCornerShape(15.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("K", color = AppBg, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                            Text("K", color = Color(0xFF07110E), fontSize = 25.sp, fontWeight = FontWeight.Black)
                         }
                         Spacer(Modifier.width(9.dp))
                         Column {
-                            Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                            Text("مدیریت هوشمند کارکرد", color = secondary, fontSize = 10.sp)
+                            Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.4.sp, fontSize = 15.sp)
+                            Text("WORK & PERFORMANCE", color = secondary, fontSize = 8.sp, letterSpacing = 1.1.sp)
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -321,7 +329,7 @@ private fun KarbanApp(
                             Text(persianDate(LocalDate.now().toString()), color = foreground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Spacer(Modifier.width(5.dp))
-                        Text("درباره", color = AccentBright, fontSize = 12.sp, modifier = Modifier.clickable { page = "about" }.padding(horizontal = 5.dp, vertical = 8.dp))
+                        Text("درباره", color = AccentBright, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { page = "about" }.padding(horizontal = 5.dp, vertical = 8.dp))
                         Text(
                             if (isLight) "☾" else "☀",
                             color = foreground,
@@ -779,7 +787,7 @@ private fun KarbanApp(
                     }
                     "about" -> {
                         val context = LocalContext.current
-                        Heading("درباره برنامه", "KARBAN · نسخه 3.0", foreground, secondary)
+                        Heading("درباره برنامه", "KARBAN · نسخه 3.0.1", foreground, secondary)
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text("KARBAN", color = AccentBright, fontSize = 26.sp, fontWeight = FontWeight.Black)
                             Text("Work & Performance Tracker", color = secondary)
@@ -788,7 +796,7 @@ private fun KarbanApp(
                             Divider(color = secondary.copy(alpha = 0.3f))
                             Text("مشخصات برنامه", color = AccentBright, fontWeight = FontWeight.Bold)
                             Text("نام برنامه: KARBAN", color = foreground)
-                            Text("نسخه: 3.0", color = foreground)
+                            Text("نسخه: 3.0.1", color = foreground)
                             Text("سال انتشار: ۱۴۰۵", color = foreground)
                             Text("سازنده: محمد جواد احمدی", color = foreground)
                             Divider(color = secondary.copy(alpha = 0.3f))
@@ -982,26 +990,27 @@ internal fun persianDate(iso: String): String = runCatching {
 
 @Composable
 private fun Heading(title: String, subtitle: String, color: Color, muted: Color) {
-    Column(Modifier.padding(vertical = 10.dp)) {
-        Text(title, color = color, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        if (subtitle.isNotBlank()) Text(subtitle, color = muted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+    Column(Modifier.padding(top = 7.dp, bottom = 15.dp)) {
+        Text(title, color = color, fontSize = 26.sp, fontWeight = FontWeight.Black, letterSpacing = (-0.4).sp)
+        if (subtitle.isNotBlank()) Text(subtitle, color = muted, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
+        Box(Modifier.padding(top = 11.dp).width(38.dp).height(3.dp).background(Accent, RoundedCornerShape(8.dp)))
     }
 }
 @Composable
 private fun Panel(color: Color, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().padding(bottom = 10.dp).background(color, RoundedCornerShape(19.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    Column(modifier.fillMaxWidth().padding(bottom = 11.dp).border(1.dp, Outline.copy(alpha = 0.72f), RoundedCornerShape(21.dp)).background(color, RoundedCornerShape(21.dp)).padding(17.dp), verticalArrangement = Arrangement.spacedBy(11.dp), content = content)
 }
 @Composable
 private fun Metric(label: String, value: String, surface: Color, muted: Color, modifier: Modifier = Modifier) {
-    Column(modifier.padding(bottom = 9.dp).background(surface, RoundedCornerShape(17.dp)).padding(15.dp)) {
-        Text(label, color = muted, fontSize = 12.sp)
-        Text(value, color = AccentBright, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+    Column(modifier.padding(bottom = 9.dp).border(1.dp, Outline.copy(alpha = 0.7f), RoundedCornerShape(18.dp)).background(surface, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text(label, color = muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text(value, color = AccentBright, fontSize = 25.sp, fontWeight = FontWeight.Black)
     }
 }
 @Composable
 private fun PrimaryButton(label: String, action: () -> Unit) {
-    Button(onClick = action, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = AppBg), shape = RoundedCornerShape(12.dp)) {
-        Text(label, fontWeight = FontWeight.Bold)
+    Button(onClick = action, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF06130D)), shape = RoundedCornerShape(16.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 2.dp)) {
+        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
     }
 }
 @Composable
@@ -1039,14 +1048,25 @@ private fun OvertimeEditor(items: List<WorkItem>, background: Color, onChange: (
 @Composable
 private fun RecordCard(record: WorkRecord, surface: Color, foreground: Color, muted: Color, actions: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
     Panel(surface) {
-        Text(persianDate(record.date), color = AccentBright, fontWeight = FontWeight.Bold)
-        Text("مجموع مساعده: ${record.advances.sumOf { it.value }.toLong()}", color = muted, fontSize = 12.sp)
-        Text("مجموع اضافه‌کاری: ${record.overtimes.sumOf { it.value }} ساعت", color = muted, fontSize = 12.sp)
-        Text("مبلغ اضافه‌کاری: ${record.overtimes.sumOf { it.amount }.toLong()}", color = muted, fontSize = 12.sp)
-        if (record.report.isNotBlank()) Text("گزارش: ${record.report}", color = foreground, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("کارکرد روزانه", color = muted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(persianDate(record.date), color = AccentBright, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f).background(CardAlt.copy(alpha = 0.72f), RoundedCornerShape(13.dp)).padding(11.dp)) {
+                Text("مساعده", color = muted, fontSize = 10.sp)
+                Text(record.advances.sumOf { it.value }.toLong().toString(), color = foreground, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(Modifier.weight(1f).background(CardAlt.copy(alpha = 0.72f), RoundedCornerShape(13.dp)).padding(11.dp)) {
+                Text("اضافه‌کاری", color = muted, fontSize = 10.sp)
+                Text("${record.overtimes.sumOf { it.value }} ساعت", color = AccentBright, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Text("مبلغ اضافه‌کاری: ${record.overtimes.sumOf { it.amount }.toLong()} تومان", color = muted, fontSize = 11.sp)
+        if (record.report.isNotBlank()) Text(record.report, color = foreground, fontSize = 12.sp)
         if (actions) Row {
-            TextButton(onClick = onEdit) { Text("ویرایش") }
-            TextButton(onClick = onDelete) { Text("حذف", color = Color(0xFFED6262)) }
+            TextButton(onClick = onEdit) { Text("ویرایش", fontWeight = FontWeight.Bold) }
+            TextButton(onClick = onDelete) { Text("حذف", color = Color(0xFFFF7373), fontWeight = FontWeight.Bold) }
         }
     }
 }
