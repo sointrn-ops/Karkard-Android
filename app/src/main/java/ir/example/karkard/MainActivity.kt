@@ -327,7 +327,7 @@ private fun KarbanApp(
                         Spacer(Modifier.width(9.dp))
                         Column {
                             Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.8.sp, fontSize = 16.sp)
-                            Text("WORKSPACE  /  3.0.1", color = secondary, fontSize = 8.sp, letterSpacing = 1.3.sp)
+                            Text("WORKSPACE  /  3.1.0", color = secondary, fontSize = 8.sp, letterSpacing = 1.3.sp)
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -821,7 +821,7 @@ private fun KarbanApp(
                     }
                     "about" -> {
                         val context = LocalContext.current
-                        Heading("درباره برنامه", "KARBAN · نسخه 3.0.1", foreground, secondary)
+                        Heading("درباره برنامه", "KARBAN · نسخه 3.1.0", foreground, secondary)
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text("KARBAN", color = AccentBright, fontSize = 26.sp, fontWeight = FontWeight.Black)
                             Text("Work & Performance Tracker", color = secondary)
@@ -830,7 +830,7 @@ private fun KarbanApp(
                             Divider(color = secondary.copy(alpha = 0.3f))
                             Text("مشخصات برنامه", color = AccentBright, fontWeight = FontWeight.Bold)
                             Text("نام برنامه: KARBAN", color = foreground)
-                            Text("نسخه: 3.0.1", color = foreground)
+                            Text("نسخه: 3.1.0", color = foreground)
                             Text("سال انتشار: ۱۴۰۵", color = foreground)
                             Text("سازنده: محمد جواد احمدی", color = foreground)
                             Divider(color = secondary.copy(alpha = 0.3f))
