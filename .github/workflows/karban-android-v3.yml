@@ -1,7 +1,7 @@
 name: Build KARBAN Android APK
 on:
   push:
-    branches: [karban-android-v3-rebuild]
+    branches: [karban-android-v3-rebuild, karban-3.0-client-features]
   workflow_dispatch:
 permissions:
   contents: read
