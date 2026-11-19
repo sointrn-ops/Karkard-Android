@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
         dataFile = AtomicFile(File(filesDir, "karban_records.json"))
         val initial = readRecords()
         val preferences = getSharedPreferences("karban_settings", MODE_PRIVATE)
-        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup, { uri, rows, scope -> KarbanPdf.write(this, uri, rows, scope) }) }
+        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, preferences.getString("monthly_salary", "0")!!.toDoubleOrNull() ?: 0.0, preferences.getString("monthly_hours", "220")!!.toDoubleOrNull() ?: 220.0, preferences.getString("overtime_multiplier", "1.4")!!.toDoubleOrNull() ?: 1.4, { salary, hours, multiplier -> preferences.edit().putString("monthly_salary", salary.toString()).putString("monthly_hours", hours.toString()).putString("overtime_multiplier", multiplier.toString()).apply() }, ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup, { uri, rows, scope -> KarbanPdf.write(this, uri, rows, scope) }) }
     }
 
     private fun encryptionKey(): SecretKey {
@@ -196,6 +196,10 @@ private fun KarbanApp(
     storageHealthy: Boolean,
     initialLightTheme: Boolean,
     saveTheme: (Boolean) -> Unit,
+    initialMonthlySalary: Double,
+    initialMonthlyHours: Double,
+    initialOvertimeMultiplier: Double,
+    savePaySettings: (Double, Double, Double) -> Unit,
     saveRecords: (List<WorkRecord>) -> Boolean,
     restoreRecords: (List<WorkRecord>) -> Boolean,
     exportBackup: (Uri, List<WorkRecord>) -> Unit,
@@ -205,6 +209,9 @@ private fun KarbanApp(
     var records by remember { mutableStateOf(initialRecords) }
     var page by remember { mutableStateOf("home") }
     var isLight by remember { mutableStateOf(initialLightTheme) }
+    var monthlySalaryText by remember { mutableStateOf(if (initialMonthlySalary > 0) initialMonthlySalary.toLong().toString() else "") }
+    var monthlyHoursText by remember { mutableStateOf(initialMonthlyHours.toString()) }
+    var overtimeMultiplierText by remember { mutableStateOf(initialOvertimeMultiplier.toString()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var editingId by remember { mutableStateOf<String?>(null) }
     var advances by remember { mutableStateOf(listOf(WorkItem("", 0.0))) }
@@ -329,6 +336,7 @@ private fun KarbanApp(
                             Text(persianDate(LocalDate.now().toString()), color = foreground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Spacer(Modifier.width(5.dp))
+                        Text("تنظیمات", color = AccentBright, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { page = "settings" }.padding(horizontal = 5.dp, vertical = 8.dp))
                         Text("درباره", color = AccentBright, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { page = "about" }.padding(horizontal = 5.dp, vertical = 8.dp))
                         Text(
                             if (isLight) "☾" else "☀",
@@ -599,8 +607,9 @@ private fun KarbanApp(
                                 Text("اضافه‌کاری", color = foreground, fontWeight = FontWeight.Bold)
                                 TextButton(onClick = { overtimes = overtimes + WorkItem("", 0.0) }) { Text("+ افزودن") }
                             }
-                            Text("برای هر مورد، ساعت و مبلغ را جداگانه وارد کنید.", color = secondary, fontSize = 10.sp)
-                            OvertimeEditor(overtimes, alternate) { overtimes = it }
+                            val configuredHourlyRate = (monthlySalaryText.toDoubleOrNull() ?: 0.0) / (monthlyHoursText.toDoubleOrNull()?.takeIf { it > 0 } ?: 220.0)
+                            Text(if (configuredHourlyRate > 0) "مبلغ با نرخ ساعتی ${configuredHourlyRate.toLong()} تومان و ضریب ${overtimeMultiplierText} محاسبه می‌شود؛ امکان ویرایش دستی وجود دارد." else "برای محاسبه خودکار، حقوق ماهانه و ساعت موظفی را در تنظیمات وارد کنید.", color = secondary, fontSize = 10.sp)
+                            OvertimeEditor(overtimes, alternate, configuredHourlyRate, overtimeMultiplierText.toDoubleOrNull() ?: 1.4) { overtimes = it }
                             val overtimeHours = overtimes.sumOf { it.value }
                             val overtimeMoney = overtimes.sumOf { it.amount }
                             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -785,6 +794,30 @@ private fun KarbanApp(
                             }
                         }
                         PrimaryButton("ذخیره گزارش PDF") { pdfLauncher.launch("KARBAN-report.pdf") }
+                    }
+                    "settings" -> {
+                        Heading("تنظیمات حقوق و دستمزد", "مقادیر پایه برای محاسبه خودکار اضافه‌کاری", foreground, secondary)
+                        Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                            Text("حقوق پایه ماهانه (تومان)", color = foreground, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(monthlySalaryText, { monthlySalaryText = it.filter { c -> c.isDigit() } }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("مثلاً ۲۰۰۰۰۰۰۰") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                            Text("ساعت موظفی ماهانه", color = foreground, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(monthlyHoursText, { monthlyHoursText = it.filter { c -> c.isDigit() || c == '.' } }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("مثلاً ۲۲۰") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                            Text("ضریب اضافه‌کاری", color = foreground, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(overtimeMultiplierText, { overtimeMultiplierText = it.filter { c -> c.isDigit() || c == '.' } }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("مثلاً ۱.۴") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                            val salary = monthlySalaryText.toDoubleOrNull() ?: 0.0
+                            val hours = monthlyHoursText.toDoubleOrNull() ?: 0.0
+                            val multiplier = overtimeMultiplierText.toDoubleOrNull() ?: 0.0
+                            val valid = salary > 0 && hours > 0 && multiplier > 0 && salary.isFinite() && hours.isFinite() && multiplier.isFinite()
+                            if (valid) {
+                                Text("دستمزد ساعتی: ${(salary / hours).toLong()} تومان", color = AccentBright, fontWeight = FontWeight.Bold)
+                                Text("مبلغ هر ساعت اضافه‌کاری: ${(salary / hours * multiplier).toLong()} تومان", color = AccentBright, fontWeight = FontWeight.Bold)
+                            } else Text("مقادیر باید بزرگ‌تر از صفر باشند.", color = Color(0xFFFF8A80), fontSize = 11.sp)
+                            PrimaryButton("ذخیره تنظیمات") {
+                                if (valid) { savePaySettings(salary, hours, multiplier); notice = "تنظیمات حقوق ذخیره شد."; page = "add" }
+                                else notice = "لطفاً همه مقادیر را به‌درستی وارد کنید."
+                            }
+                            Text("تغییر تنظیمات روی محاسبات جدید اثر می‌گذارد. مبلغ‌های دستی ثبت‌شده و سوابق قبلی حذف نمی‌شوند.", color = secondary, fontSize = 11.sp)
+                        }
                     }
                     "about" -> {
                         val context = LocalContext.current
@@ -1032,7 +1065,7 @@ private fun ItemEditor(items: List<WorkItem>, titleHint: String, valueHint: Stri
     }
 }
 @Composable
-private fun OvertimeEditor(items: List<WorkItem>, background: Color, onChange: (List<WorkItem>) -> Unit) {
+private fun OvertimeEditor(items: List<WorkItem>, background: Color, hourlyRate: Double, multiplier: Double, onChange: (List<WorkItem>) -> Unit) {
     items.forEachIndexed { index, item ->
         Column(Modifier.fillMaxWidth().padding(bottom = 8.dp).background(background, RoundedCornerShape(14.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1041,7 +1074,7 @@ private fun OvertimeEditor(items: List<WorkItem>, background: Color, onChange: (
             }
             OutlinedTextField(value = item.title, onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(title = value) }) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("عنوان یا توضیح اضافه‌کاری") }, singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = if (item.value == 0.0) "" else item.value.toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(value = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("ساعت") }, label = { Text("مدت (ساعت)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                OutlinedTextField(value = if (item.value == 0.0) "" else item.value.toString(), onValueChange = { value -> val hours = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0; val autoAmount = if (hourlyRate > 0 && multiplier > 0) (hours * hourlyRate * multiplier).toLong().toDouble() else item.amount; onChange(items.toMutableList().also { it[index] = item.copy(value = hours, amount = autoAmount) }) }, modifier = Modifier.weight(1f), placeholder = { Text("ساعت") }, label = { Text("مدت (ساعت)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
                 OutlinedTextField(value = if (item.amount == 0.0) "" else item.amount.toLong().toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(amount = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("مبلغ") }, label = { Text("مبلغ (تومان)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
             }
         }
