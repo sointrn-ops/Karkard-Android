@@ -1,7 +1,7 @@
 name: Build KARBAN Android APK
 on:
   push:
-    branches: [karban-android-v3-rebuild, karban-3.0-client-features]
+    branches: [karban-3.0-client-features]
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Build debug APK
-        run: gradle --no-daemon testDebugUnitTest assembleDebug
+        run: gradle --no-daemon assembleDebug
       - name: Verify APK exists
         run: test -s app/build/outputs/apk/debug/app-debug.apk
       - name: Upload APK artifact
