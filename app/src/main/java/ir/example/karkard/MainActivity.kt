@@ -743,7 +743,7 @@ private fun KarbanApp(
                         val reportMonths = records.groupBy {
                             val p = jalaliParts(LocalDate.parse(it.date))
                             p.first to p.second
-                        }.toList().sortedByDescending { it.first }
+                        }.toList().sortedByDescending { it.first.first * 100 + it.first.second }
                         val reportMonthNames = listOf("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
                         Heading("گزارش‌ها", "خلاصه عملکرد و گزارش ماهانه", foreground, secondary)
                         Metric("روزهای ثبت‌شده", records.size.toString(), surface, secondary, Modifier.fillMaxWidth())
