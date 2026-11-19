@@ -347,7 +347,7 @@ private fun KarbanApp(
                             parts.first == current.first && parts.second == current.second
                         }
                         val monthAdvance = total(monthRecords.flatMap { it.advances }).toLong()
-                        val allOvertime = total(records.flatMap { it.overtimes })
+                        val monthOvertime = total(monthRecords.flatMap { it.overtimes })
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp)) {
                                 Text("داشبورد کاربان", color = AccentBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
@@ -378,8 +378,8 @@ private fun KarbanApp(
                                 }
                                 Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
                                     Text("اضافه‌کاری", color = secondary, fontSize = 11.sp)
-                                    Text(allOvertime.toString(), color = AccentBright, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                                    Text("مجموع ساعت ثبت‌شده", color = secondary, fontSize = 10.sp)
+                                    Text(monthOvertime.toString(), color = AccentBright, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                                    Text("ساعت این ماه", color = secondary, fontSize = 10.sp)
                                 }
                                 Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
                                     Text("امروز", color = secondary, fontSize = 11.sp)
@@ -731,12 +731,40 @@ private fun KarbanApp(
                         }
                     }
                     "reports" -> {
-                        Heading("گزارش‌ها", "خلاصه عملکرد و اطلاعات مالی", foreground, secondary)
+                        val reportMonths = records.groupBy {
+                            val p = jalaliParts(LocalDate.parse(it.date))
+                            p.first to p.second
+                        }.toList().sortedByDescending { it.first }
+                        val reportMonthNames = listOf("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
+                        Heading("گزارش‌ها", "خلاصه عملکرد و گزارش ماهانه", foreground, secondary)
                         Metric("روزهای ثبت‌شده", records.size.toString(), surface, secondary, Modifier.fillMaxWidth())
-                        Metric("روزهای دارای اضافه‌کاری", records.count { total(it.overtimes) > 0 }.toString(), surface, secondary, Modifier.fillMaxWidth())
-                        Metric("مجموع مساعده‌ها", total(records.flatMap { it.advances }).toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
-                        Metric("مجموع ساعت اضافه‌کاری", total(records.flatMap { it.overtimes }).toString(), surface, secondary, Modifier.fillMaxWidth())
-                        Metric("مجموع مبلغ اضافه‌کاری", records.sumOf { day -> day.overtimes.sumOf { it.amount } }.toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Text("خلاصه هر ماه", color = foreground, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            if (reportMonths.isEmpty()) {
+                                Text("هنوز گزارشی برای نمایش ثبت نشده است.", color = secondary)
+                            }
+                            reportMonths.forEach { (yearMonth, monthRecords) ->
+                                val (year, month) = yearMonth
+                                val monthAdvance = total(monthRecords.flatMap { it.advances }).toLong()
+                                val monthOvertime = total(monthRecords.flatMap { it.overtimes })
+                                val monthOvertimeMoney = monthRecords.sumOf { day -> day.overtimes.sumOf { it.amount } }.toLong()
+                                Panel(surface) {
+                                    Text("${reportMonthNames[month - 1]} $year", color = AccentBright, fontWeight = FontWeight.Bold)
+                                    Text("روزهای ثبت‌شده: ${monthRecords.map { it.date }.distinct().size}", color = secondary, fontSize = 11.sp)
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text("جمع مساعده", color = secondary, fontSize = 10.sp)
+                                            Text("$monthAdvance تومان", color = foreground, fontWeight = FontWeight.Bold)
+                                        }
+                                        Column(Modifier.weight(1f)) {
+                                            Text("ساعت اضافه‌کاری", color = secondary, fontSize = 10.sp)
+                                            Text("$monthOvertime ساعت", color = AccentBright, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Text("مبلغ اضافه‌کاری: $monthOvertimeMoney تومان", color = secondary, fontSize = 11.sp)
+                                }
+                            }
+                        }
                         Box {
                             OutlinedButton(onClick = { showPdfScopeMenu = true }, modifier = Modifier.fillMaxWidth()) {
                                 Text("بازه خروجی PDF: " + when (pdfScope) { "day" -> "روزانه"; "week" -> "هفتگی"; "month" -> "ماهانه"; "year" -> "سالانه"; else -> "همه سوابق" })
