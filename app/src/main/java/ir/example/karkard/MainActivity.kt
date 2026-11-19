@@ -54,6 +54,7 @@ private val MainText = Color(0xFFF1F7F3)
 
 data class WorkItem(val title: String, val value: Double, val amount: Double = 0.0)
 data class WorkRecord(val id: String, val date: String, val advances: List<WorkItem>, val overtimes: List<WorkItem>, val report: String, val workedMinutes: Int? = null, val manualOvertimeMinutes: Int? = null, val manualOvertimeAmountToman: Long? = null, val settingsVersion: Long? = null)
+data class BackupData(val records: List<WorkRecord>, val settings: WorkSettings?)
 
 class MainActivity : ComponentActivity() {
     private lateinit var dataFile: AtomicFile
@@ -201,20 +202,41 @@ class MainActivity : ComponentActivity() {
         return restored
     }
 
-    private fun exportBackup(uri: Uri, records: List<WorkRecord>) {
-        val payload = JSONObject().put("app", "KARBAN").put("formatVersion", 1)
-            .put("records", JSONArray(encodeRecords(records))).toString(2)
+    private fun settingsJson(settings: WorkSettings) = JSONObject()
+        .put("wageMode", settings.wageMode.name)
+        .put("monthlySalaryToman", settings.monthlySalaryToman)
+        .put("hourlyRateToman", settings.hourlyRateToman)
+        .put("monthlyRequiredMinutes", settings.monthlyRequiredMinutes)
+        .put("dailyRequiredMinutes", settings.dailyRequiredMinutes)
+        .put("overtimeMultiplier", settings.overtimeMultiplier.toPlainString())
+        .put("settingsVersion", settings.settingsVersion)
+
+    private fun parseSettings(saved: JSONObject): WorkSettings = WorkSettings(
+        wageMode = runCatching { WageMode.valueOf(saved.optString("wageMode", "HOURLY_RATE")) }.getOrDefault(WageMode.HOURLY_RATE),
+        monthlySalaryToman = saved.optLong("monthlySalaryToman", 0L),
+        hourlyRateToman = saved.optLong("hourlyRateToman", 0L),
+        monthlyRequiredMinutes = saved.optInt("monthlyRequiredMinutes", 0),
+        dailyRequiredMinutes = saved.optInt("dailyRequiredMinutes", 480),
+        overtimeMultiplier = BigDecimal(saved.optString("overtimeMultiplier", "1.4")),
+        settingsVersion = saved.optLong("settingsVersion", 1L)
+    )
+
+    private fun exportBackup(uri: Uri, records: List<WorkRecord>, settings: WorkSettings) {
+        val payload = JSONObject().put("app", "KARBAN").put("formatVersion", 2)
+            .put("records", JSONArray(encodeRecords(records))).put("settings", settingsJson(settings)).toString(2)
         contentResolver.openOutputStream(uri)?.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
             ?: error("Unable to open backup destination")
     }
 
-    private fun readBackup(uri: Uri): List<WorkRecord> {
+    private fun readBackup(uri: Uri): BackupData {
         val raw = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             ?: error("Unable to read backup")
         require(raw.length <= 10_000_000)
         val root = JSONObject(raw)
-        require(root.optString("app") == "KARBAN" && root.optInt("formatVersion") == 1)
-        return parseRecords(root.getJSONArray("records"))
+        val version = root.optInt("formatVersion")
+        require(root.optString("app") == "KARBAN" && version in 1..2)
+        val settings = if (version >= 2) root.optJSONObject("settings")?.let(::parseSettings) else null
+        return BackupData(parseRecords(root.getJSONArray("records")), settings)
     }
 }
 
@@ -226,8 +248,8 @@ private fun KarbanApp(
     saveTheme: (Boolean) -> Unit,
     saveRecords: (List<WorkRecord>) -> Boolean,
     restoreRecords: (List<WorkRecord>) -> Boolean,
-    exportBackup: (Uri, List<WorkRecord>) -> Unit,
-    readBackup: (Uri) -> List<WorkRecord>,
+    exportBackup: (Uri, List<WorkRecord>, WorkSettings) -> Unit,
+    readBackup: (Uri) -> BackupData,
     exportPdf: (Uri, List<WorkRecord>, String) -> Unit,
     initialWorkSettings: WorkSettings,
     saveWorkSettings: (WorkSettings) -> Unit
@@ -257,13 +279,13 @@ private fun KarbanApp(
     var notice by remember { mutableStateOf(if (storageHealthy) "" else "خواندن اطلاعات قبلی ممکن نشد. برای محافظت از سوابق، ذخیره‌سازی غیرفعال شده است. برنامه را حذف نکنید و فایل پشتیبان سالم را بازیابی کنید.") }
     var weekOffset by remember { mutableIntStateOf(0) }
     var deleteTarget by remember { mutableStateOf<WorkRecord?>(null) }
-    var pendingRestore by remember { mutableStateOf<List<WorkRecord>?>(null) }
+    var pendingRestore by remember { mutableStateOf<BackupData?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     var calendarYear by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).first) }
     var calendarMonth by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).second) }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) runCatching { exportBackup(uri, records); notice = "فایل پشتیبان ذخیره شد." }
+        if (uri != null) runCatching { exportBackup(uri, records, workSettings); notice = "فایل پشتیبان شامل سوابق و تنظیمات ذخیره شد." }
             .onFailure { notice = "ذخیره فایل پشتیبان ناموفق بود." }
     }
     var pdfScope by remember { mutableStateOf("month") }
@@ -1018,8 +1040,19 @@ private fun KarbanApp(
                 TextButton(onClick = {
                     val restored = pendingRestore
                     if (restored != null) {
-                        if (restoreRecords(restored)) { records = restored; notice = "اطلاعات با موفقیت بازیابی شد." }
-                        else notice = "بازیابی ناموفق بود؛ اطلاعات فعلی حفظ شدند."
+                        if (restoreRecords(restored.records)) {
+                            records = restored.records
+                            restored.settings?.let { settings ->
+                                workSettings = settings
+                                saveWorkSettings(settings)
+                                salaryText = settings.monthlySalaryToman.takeIf { it > 0 }?.toString() ?: ""
+                                hourlyRateText = settings.hourlyRateToman.takeIf { it > 0 }?.toString() ?: ""
+                                monthlyMinutesText = settings.monthlyRequiredMinutes.takeIf { it > 0 }?.toString() ?: ""
+                                dailyMinutesText = settings.dailyRequiredMinutes.toString()
+                                overtimeMultiplierText = settings.overtimeMultiplier.toPlainString()
+                            }
+                            notice = "سوابق و تنظیمات با موفقیت بازیابی شدند."
+                        } else notice = "بازیابی ناموفق بود؛ اطلاعات فعلی حفظ شدند."
                     }
                     pendingRestore = null
                 }) { Text("جایگزینی و بازیابی") }
