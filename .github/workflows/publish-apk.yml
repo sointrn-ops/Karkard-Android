@@ -1,0 +1,45 @@
+name: Publish KARBAN APK
+on:
+  push:
+    branches:
+      - karban-3.0-client-features
+    paths:
+      - .github/workflows/publish-apk.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the verified build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: KARBAN-Android-3.0.1-debug
+          path: artifact
+          repository: ${{ github.repository }}
+          run-id: 44544186970
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract APK
+        run: |
+          mkdir -p release
+          find artifact -type f -name '*.apk' -exec cp {} release/KARBAN-3.0.1.apk \;
+          if [ ! -f release/KARBAN-3.0.1.apk ]; then
+            find artifact -type f -name '*.zip' -print -quit | xargs -r -I{} unzip -o {} -d extracted
+            find extracted -type f -name '*.apk' -exec cp {} release/KARBAN-3.0.1.apk \;
+          fi
+          test -s release/KARBAN-3.0.1.apk
+          file release/KARBAN-3.0.1.apk
+      - name: Publish APK release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.0.1
+          name: KARBAN 3.0.1
+          body: |
+            KARBAN Android 3.0.1 — Debug build.
+            This is a test build, not a production-signed release.
+          files: release/KARBAN-3.0.1.apk
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
