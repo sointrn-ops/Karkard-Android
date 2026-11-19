@@ -44,14 +44,14 @@ import javax.crypto.spec.GCMParameterSpec
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 
-private val Accent = Color(0xFF39D99A)
-private val AccentBright = Color(0xFF75F0BB)
-private val AppBg = Color(0xFF080D13)
-private val CardBg = Color(0xFF111923)
-private val CardAlt = Color(0xFF1A2632)
-private val Muted = Color(0xFF91A1B2)
-private val MainText = Color(0xFFF1F5F9)
-private val Outline = Color(0xFF263545)
+private val Accent = Color(0xFFB7E36A)
+private val AccentBright = Color(0xFFD1F58B)
+private val AppBg = Color(0xFF090D0B)
+private val CardBg = Color(0xFF121916)
+private val CardAlt = Color(0xFF1B2620)
+private val Muted = Color(0xFF91A096)
+private val MainText = Color(0xFFF0F4EE)
+private val Outline = Color(0xFF29372F)
 
 data class WorkItem(val title: String, val value: Double, val amount: Double = 0.0)
 data class WorkRecord(val id: String, val date: String, val advances: List<WorkItem>, val overtimes: List<WorkItem>, val report: String)
@@ -252,11 +252,11 @@ private fun KarbanApp(
         }
     }
 
-    val background = if (isLight) Color(0xFFF3F6F8) else AppBg
-    val surface = if (isLight) Color.White else CardBg
-    val alternate = if (isLight) Color(0xFFEAF0F3) else CardAlt
-    val foreground = if (isLight) Color(0xFF17232D) else MainText
-    val secondary = if (isLight) Color(0xFF687887) else Muted
+    val background = if (isLight) Color(0xFFF4F6F1) else AppBg
+    val surface = if (isLight) Color(0xFFFFFFFF) else CardBg
+    val alternate = if (isLight) Color(0xFFEBF0E8) else CardAlt
+    val foreground = if (isLight) Color(0xFF172018) else MainText
+    val secondary = if (isLight) Color(0xFF6C796D) else Muted
 
     fun total(items: List<WorkItem>) = items.sumOf { it.value }
     fun persist(next: List<WorkRecord>) {
@@ -300,27 +300,27 @@ private fun KarbanApp(
                 }
             }
         ) { padding ->
-            Column(Modifier.fillMaxSize().background(background).padding(padding).padding(horizontal = 18.dp)) {
+            Column(Modifier.fillMaxSize().background(background).padding(padding).padding(horizontal = 20.dp)) {
                 Row(
                     Modifier.fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 15.dp)
-                        .border(1.dp, if (isLight) Color(0xFFE3E9ED) else Outline, RoundedCornerShape(20.dp))
-                        .background(surface, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 15.dp, vertical = 13.dp),
+                        .padding(top = 12.dp, bottom = 18.dp)
+                        .border(1.dp, if (isLight) Color(0xFFE3E9ED) else Outline.copy(alpha = 0.75f), RoundedCornerShape(22.dp))
+                        .background(surface, RoundedCornerShape(22.dp))
+                        .padding(horizontal = 16.dp, vertical = 15.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            Modifier.size(44.dp).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(AccentBright, Accent)), RoundedCornerShape(15.dp)),
+                            Modifier.size(46.dp).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(AccentBright, Accent)), RoundedCornerShape(16.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text("K", color = Color(0xFF07110E), fontSize = 25.sp, fontWeight = FontWeight.Black)
                         }
                         Spacer(Modifier.width(9.dp))
                         Column {
-                            Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.4.sp, fontSize = 15.sp)
-                            Text("WORK & PERFORMANCE", color = secondary, fontSize = 8.sp, letterSpacing = 1.1.sp)
+                            Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.8.sp, fontSize = 16.sp)
+                            Text("WORKSPACE  /  3.0.1", color = secondary, fontSize = 8.sp, letterSpacing = 1.3.sp)
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -364,10 +364,11 @@ private fun KarbanApp(
                             }
                             Column(
                                 Modifier.fillMaxWidth()
+                                    .border(1.dp, Color(0xFF54743C).copy(alpha = 0.55f), RoundedCornerShape(25.dp))
                                     .background(
-                                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF1C8B5A), Color(0xFF103B2B))),
-                                        RoundedCornerShape(23.dp)
-                                    ).padding(19.dp),
+                                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF243B28), Color(0xFF14241B), Color(0xFF101914))),
+                                        RoundedCornerShape(25.dp)
+                                    ).padding(21.dp),
                                 verticalArrangement = Arrangement.spacedBy(9.dp)
                             ) {
                                 Text("خلاصه این ماه", color = Color.White.copy(alpha = 0.82f), fontSize = 13.sp)
@@ -379,7 +380,7 @@ private fun KarbanApp(
                                 }
                             }
                             Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
+                                Column(Modifier.weight(1f).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(19.dp)).background(surface, RoundedCornerShape(19.dp)).padding(15.dp)) {
                                     Text("روزهای ثبت‌شده", color = secondary, fontSize = 11.sp)
                                     Text(records.size.toString(), color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                                     Text("در کل", color = secondary, fontSize = 10.sp)
@@ -990,27 +991,28 @@ internal fun persianDate(iso: String): String = runCatching {
 
 @Composable
 private fun Heading(title: String, subtitle: String, color: Color, muted: Color) {
-    Column(Modifier.padding(top = 7.dp, bottom = 15.dp)) {
-        Text(title, color = color, fontSize = 26.sp, fontWeight = FontWeight.Black, letterSpacing = (-0.4).sp)
-        if (subtitle.isNotBlank()) Text(subtitle, color = muted, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
-        Box(Modifier.padding(top = 11.dp).width(38.dp).height(3.dp).background(Accent, RoundedCornerShape(8.dp)))
+    Column(Modifier.padding(top = 10.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(title, color = color, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.65).sp)
+        if (subtitle.isNotBlank()) Text(subtitle, color = muted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Box(Modifier.padding(top = 7.dp).width(32.dp).height(3.dp).background(Accent, RoundedCornerShape(20.dp)))
     }
 }
 @Composable
 private fun Panel(color: Color, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().padding(bottom = 11.dp).border(1.dp, Outline.copy(alpha = 0.72f), RoundedCornerShape(21.dp)).background(color, RoundedCornerShape(21.dp)).padding(17.dp), verticalArrangement = Arrangement.spacedBy(11.dp), content = content)
+    Column(modifier.fillMaxWidth().padding(bottom = 13.dp).border(1.dp, Outline.copy(alpha = 0.82f), RoundedCornerShape(22.dp)).background(color, RoundedCornerShape(22.dp)).padding(horizontal = 17.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(13.dp), content = content)
 }
 @Composable
 private fun Metric(label: String, value: String, surface: Color, muted: Color, modifier: Modifier = Modifier) {
-    Column(modifier.padding(bottom = 9.dp).border(1.dp, Outline.copy(alpha = 0.7f), RoundedCornerShape(18.dp)).background(surface, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text(label, color = muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-        Text(value, color = AccentBright, fontSize = 25.sp, fontWeight = FontWeight.Black)
+    Column(modifier.padding(bottom = 9.dp).border(1.dp, Outline.copy(alpha = 0.82f), RoundedCornerShape(20.dp)).background(surface, RoundedCornerShape(20.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Box(Modifier.width(24.dp).height(3.dp).background(Accent.copy(alpha = 0.9f), RoundedCornerShape(8.dp)))
+        Text(label, color = muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text(value, color = AccentBright, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp)
     }
 }
 @Composable
 private fun PrimaryButton(label: String, action: () -> Unit) {
-    Button(onClick = action, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF06130D)), shape = RoundedCornerShape(16.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 2.dp)) {
-        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+    Button(onClick = action, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF11180D)), shape = RoundedCornerShape(17.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 1.dp)) {
+        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, letterSpacing = 0.1.sp)
     }
 }
 @Composable
