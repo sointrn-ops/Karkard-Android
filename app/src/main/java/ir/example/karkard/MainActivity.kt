@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.Calendar
 import java.util.Locale
@@ -52,7 +53,7 @@ private val Muted = Color(0xFF91A399)
 private val MainText = Color(0xFFF1F7F3)
 
 data class WorkItem(val title: String, val value: Double, val amount: Double = 0.0)
-data class WorkRecord(val id: String, val date: String, val advances: List<WorkItem>, val overtimes: List<WorkItem>, val report: String)
+data class WorkRecord(val id: String, val date: String, val advances: List<WorkItem>, val overtimes: List<WorkItem>, val report: String, val workedMinutes: Int? = null, val manualOvertimeMinutes: Int? = null, val manualOvertimeAmountToman: Long? = null, val settingsVersion: Long? = null)
 
 class MainActivity : ComponentActivity() {
     private lateinit var dataFile: AtomicFile
@@ -65,7 +66,31 @@ class MainActivity : ComponentActivity() {
         dataFile = AtomicFile(File(filesDir, "karban_records.json"))
         val initial = readRecords()
         val preferences = getSharedPreferences("karban_settings", MODE_PRIVATE)
-        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false), { value -> preferences.edit().putBoolean("light_theme", value).apply() }, ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup, { uri, rows, scope -> KarbanPdf.write(this, uri, rows, scope) }) }
+        val initialSettings = runCatching {
+            val saved = JSONObject(preferences.getString("work_settings", "{}") ?: "{}")
+            WorkSettings(
+                wageMode = runCatching { WageMode.valueOf(saved.optString("wageMode", "HOURLY_RATE")) }.getOrDefault(WageMode.HOURLY_RATE),
+                monthlySalaryToman = saved.optLong("monthlySalaryToman", 0L),
+                hourlyRateToman = saved.optLong("hourlyRateToman", 0L),
+                monthlyRequiredMinutes = saved.optInt("monthlyRequiredMinutes", 0),
+                dailyRequiredMinutes = saved.optInt("dailyRequiredMinutes", 480),
+                overtimeMultiplier = BigDecimal(saved.optString("overtimeMultiplier", "1.4")),
+                settingsVersion = saved.optLong("settingsVersion", 1L)
+            )
+        }.getOrDefault(WorkSettings())
+        setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false),
+            { value -> preferences.edit().putBoolean("light_theme", value).apply() },
+            initialSettings,
+            { value -> preferences.edit().putString("work_settings", JSONObject()
+                .put("wageMode", value.wageMode.name)
+                .put("monthlySalaryToman", value.monthlySalaryToman)
+                .put("hourlyRateToman", value.hourlyRateToman)
+                .put("monthlyRequiredMinutes", value.monthlyRequiredMinutes)
+                .put("dailyRequiredMinutes", value.dailyRequiredMinutes)
+                .put("overtimeMultiplier", value.overtimeMultiplier.toPlainString())
+                .put("settingsVersion", value.settingsVersion).toString()).apply() },
+            ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup,
+            { uri, rows, scope -> KarbanPdf.write(this, uri, rows, scope) }) }
     }
 
     private fun encryptionKey(): SecretKey {
@@ -112,7 +137,10 @@ class MainActivity : ComponentActivity() {
             val date = obj.optString("date")
             require(id.isNotBlank() && id.length <= 100)
             require(runCatching { LocalDate.parse(date) }.isSuccess)
-            WorkRecord(id, date, parseItems("advances"), parseItems("overtimes"), obj.optString("report").take(5000))
+            val workedMinutes = if (obj.has("workedMinutes") && !obj.isNull("workedMinutes")) obj.optInt("workedMinutes").also { require(it >= 0) } else null
+            val manualMinutes = if (obj.has("manualOvertimeMinutes") && !obj.isNull("manualOvertimeMinutes")) obj.optInt("manualOvertimeMinutes").also { require(it >= 0) } else null
+            val manualAmount = if (obj.has("manualOvertimeAmountToman") && !obj.isNull("manualOvertimeAmountToman")) obj.optLong("manualOvertimeAmountToman").also { require(it >= 0) } else null
+            WorkRecord(id, date, parseItems("advances"), parseItems("overtimes"), obj.optString("report").take(5000), workedMinutes, manualMinutes, manualAmount, if (obj.has("settingsVersion")) obj.optLong("settingsVersion") else null)
         }
     }
 
@@ -124,7 +152,9 @@ class MainActivity : ComponentActivity() {
             }
             array.put(JSONObject().put("id", record.id).put("date", record.date)
                 .put("advances", items(record.advances)).put("overtimes", items(record.overtimes))
-                .put("report", record.report))
+                .put("report", record.report)
+                .put("workedMinutes", record.workedMinutes).put("manualOvertimeMinutes", record.manualOvertimeMinutes)
+                .put("manualOvertimeAmountToman", record.manualOvertimeAmountToman).put("settingsVersion", record.settingsVersion))
         }
         return array.toString()
     }
@@ -198,9 +228,12 @@ private fun KarbanApp(
     restoreRecords: (List<WorkRecord>) -> Boolean,
     exportBackup: (Uri, List<WorkRecord>) -> Unit,
     readBackup: (Uri) -> List<WorkRecord>,
-    exportPdf: (Uri, List<WorkRecord>, String) -> Unit
+    exportPdf: (Uri, List<WorkRecord>, String) -> Unit,
+    initialWorkSettings: WorkSettings,
+    saveWorkSettings: (WorkSettings) -> Unit
 ) {
     var records by remember { mutableStateOf(initialRecords) }
+    var workSettings by remember { mutableStateOf(initialWorkSettings) }
     var page by remember { mutableStateOf("home") }
     var isLight by remember { mutableStateOf(initialLightTheme) }
     var selectedDate by remember { mutableStateOf(LocalDate.now().toString()) }
@@ -208,6 +241,14 @@ private fun KarbanApp(
     var advances by remember { mutableStateOf(listOf(WorkItem("", 0.0))) }
     var overtimes by remember { mutableStateOf(listOf(WorkItem("", 0.0))) }
     var report by remember { mutableStateOf("") }
+    var workedDurationText by remember { mutableStateOf("") }
+    var manualOvertimeMinutesText by remember { mutableStateOf("") }
+    var manualOvertimeAmountText by remember { mutableStateOf("") }
+    var salaryText by remember { mutableStateOf(initialWorkSettings.monthlySalaryToman.takeIf { it > 0 }?.toString() ?: "") }
+    var hourlyRateText by remember { mutableStateOf(initialWorkSettings.hourlyRateToman.takeIf { it > 0 }?.toString() ?: "") }
+    var monthlyMinutesText by remember { mutableStateOf(initialWorkSettings.monthlyRequiredMinutes.takeIf { it > 0 }?.toString() ?: "") }
+    var dailyMinutesText by remember { mutableStateOf(initialWorkSettings.dailyRequiredMinutes.toString()) }
+    var overtimeMultiplierText by remember { mutableStateOf(initialWorkSettings.overtimeMultiplier.toPlainString()) }
     var search by remember { mutableStateOf("") }
     var archiveMonth by remember { mutableIntStateOf(0) }
     var archiveYear by remember { mutableIntStateOf(0) }
@@ -266,6 +307,9 @@ private fun KarbanApp(
         advances = listOf(WorkItem("", 0.0))
         overtimes = listOf(WorkItem("", 0.0))
         report = ""
+        workedDurationText = ""
+        manualOvertimeMinutesText = ""
+        manualOvertimeAmountText = ""
         page = "add"
     }
     fun edit(record: WorkRecord) {
@@ -274,6 +318,10 @@ private fun KarbanApp(
         advances = record.advances.ifEmpty { listOf(WorkItem("", 0.0)) }
         overtimes = record.overtimes.ifEmpty { listOf(WorkItem("", 0.0)) }
         report = record.report
+        workedDurationText = record.workedMinutes?.let { "%02d:%02d".format(it / 60, it % 60) } ?: ""
+        manualOvertimeMinutesText = record.manualOvertimeMinutes?.toString() ?: ""
+        manualOvertimeAmountText = record.manualOvertimeAmountToman?.toString() ?: ""
+        overtimes = record.overtimes.filterNot { it.title == "اضافه‌کاری محاسبه‌شده" }.ifEmpty { listOf(WorkItem("", 0.0)) }
         page = "add"
     }
 
@@ -321,6 +369,7 @@ private fun KarbanApp(
                             Text(persianDate(LocalDate.now().toString()), color = foreground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Spacer(Modifier.width(5.dp))
+                        Text("تنظیمات", color = AccentBright, fontSize = 12.sp, modifier = Modifier.clickable { page = "settings" }.padding(horizontal = 5.dp, vertical = 8.dp))
                         Text("درباره", color = AccentBright, fontSize = 12.sp, modifier = Modifier.clickable { page = "about" }.padding(horizontal = 5.dp, vertical = 8.dp))
                         Text(
                             if (isLight) "☾" else "☀",
@@ -573,6 +622,49 @@ private fun KarbanApp(
                                     showCalendar = true
                                 }) { Text("انتخاب تاریخ شمسی") }
                             }
+                            Text("مدت کارکرد واقعی (ساعت:دقیقه)", color = foreground, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(
+                                value = workedDurationText,
+                                onValueChange = { value -> if (value.matches(Regex("\\d{0,3}(:\\d{0,2})?"))) workedDurationText = value },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("مثلاً 08:45") },
+                                supportingText = { Text("برای محاسبه خودکار اضافه‌کاری، مدت کارکرد را وارد کن. دقت محاسبه یک دقیقه است.") },
+                                singleLine = true
+                            )
+                            val parsedWorkedMinutes = runCatching {
+                                if (workedDurationText.isBlank()) null else CalculationEngine.durationMinutes(workedDurationText)
+                            }.getOrNull()
+                            val calculatedPreview = parsedWorkedMinutes?.let {
+                                runCatching {
+                                    CalculationEngine.calculate(
+                                        it, workSettings,
+                                        manualOvertimeMinutesText.toIntOrNull(),
+                                        manualOvertimeAmountText.toLongOrNull()
+                                    )
+                                }.getOrNull()
+                            }
+                            if (calculatedPreview != null) {
+                                Text("اضافه‌کاری محاسبه‌شده: ${calculatedPreview.overtimeMinutes / 60} ساعت و ${calculatedPreview.overtimeMinutes % 60} دقیقه", color = AccentBright, fontWeight = FontWeight.SemiBold)
+                                Text("مبلغ تخمینی: ${calculatedPreview.overtimeAmountToman} تومان", color = secondary, fontSize = 12.sp)
+                            } else if (workedDurationText.isNotBlank()) {
+                                Text("فرمت زمان یا تنظیمات حقوق معتبر نیست.", color = Color(0xFFED6262), fontSize = 11.sp)
+                            }
+                            OutlinedTextField(
+                                value = manualOvertimeMinutesText,
+                                onValueChange = { manualOvertimeMinutesText = it.filter(Char::isDigit) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("اصلاح دستی مدت اضافه‌کاری (دقیقه) — اختیاری") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            OutlinedTextField(
+                                value = manualOvertimeAmountText,
+                                onValueChange = { manualOvertimeAmountText = it.filter(Char::isDigit) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("اصلاح دستی مبلغ اضافه‌کاری (تومان) — اختیاری") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("مساعده‌ها", color = foreground, fontWeight = FontWeight.Bold)
                                 TextButton(onClick = { advances = advances + WorkItem("", 0.0) }) { Text("+ افزودن") }
@@ -610,10 +702,22 @@ private fun KarbanApp(
                                 }
                             }) { Text("کپی اطلاعات روز قبل") }
                             PrimaryButton("ذخیره کارکرد") {
+                                val durationMinutes = if (workedDurationText.isBlank()) null else runCatching { CalculationEngine.durationMinutes(workedDurationText) }.getOrNull()
+                                val manualMinutes = manualOvertimeMinutesText.toIntOrNull()
+                                val manualAmount = manualOvertimeAmountText.toLongOrNull()
+                                val computed = durationMinutes?.let { runCatching { CalculationEngine.calculate(it, workSettings, manualMinutes, manualAmount) }.getOrNull() }
+                                if (workedDurationText.isNotBlank() && (durationMinutes == null || computed == null)) {
+                                    notice = "مدت کارکرد یا تنظیمات محاسبه معتبر نیست."
+                                    return@PrimaryButton
+                                }
+                                val storedOvertimes = overtimes.filter { it.title.isNotBlank() || it.value > 0 || it.amount > 0 }.toMutableList()
+                                if (computed != null && (computed.overtimeMinutes > 0 || computed.overtimeAmountToman > 0)) {
+                                    storedOvertimes.add(WorkItem("اضافه‌کاری محاسبه‌شده", computed.overtimeMinutes / 60.0 + (computed.overtimeMinutes % 60) / 60.0, computed.overtimeAmountToman.toDouble()))
+                                }
                                 val record = WorkRecord(
                                     editingId ?: System.currentTimeMillis().toString(), selectedDate,
                                     advances.filter { it.title.isNotBlank() || it.value > 0 },
-                                    overtimes.filter { it.title.isNotBlank() || it.value > 0 || it.amount > 0 }, report
+                                    storedOvertimes, report, durationMinutes, manualMinutes, manualAmount, workSettings.settingsVersion
                                 )
                                 val next = if (editingId == null) records + record else records.map { if (it.id == editingId) record else it }
                                 if (saveRecords(next)) {
@@ -718,6 +822,52 @@ private fun KarbanApp(
                                         }
                                     }
                                     RecordCard(record, surface, foreground, secondary, true, { edit(record) }, { deleteTarget = record })
+                                }
+                            }
+                        }
+                    }
+                    "settings" -> {
+                        Heading("تنظیمات حقوق و کارکرد", "قوانین محاسبه برای ثبت‌های جدید", foreground, secondary)
+                        Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                            Text("روش تعیین دستمزد", color = AccentBright, fontWeight = FontWeight.Bold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = workSettings.wageMode == WageMode.MONTHLY_SALARY, onClick = { workSettings = workSettings.copy(wageMode = WageMode.MONTHLY_SALARY) }, label = { Text("حقوق ماهانه") })
+                                FilterChip(selected = workSettings.wageMode == WageMode.HOURLY_RATE, onClick = { workSettings = workSettings.copy(wageMode = WageMode.HOURLY_RATE) }, label = { Text("نرخ ساعتی") })
+                            }
+                            if (workSettings.wageMode == WageMode.MONTHLY_SALARY) {
+                                OutlinedTextField(salaryText, { salaryText = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("حقوق ماهانه (تومان)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                                OutlinedTextField(monthlyMinutesText, { monthlyMinutesText = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("ساعات موظفی ماهانه (دقیقه)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                            } else {
+                                OutlinedTextField(hourlyRateText, { hourlyRateText = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("دستمزد هر ساعت (تومان)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                            }
+                            OutlinedTextField(dailyMinutesText, { dailyMinutesText = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("ساعات موظفی روزانه (دقیقه)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                            OutlinedTextField(overtimeMultiplierText, { overtimeMultiplierText = it.filter { c -> c.isDigit() || c == '.' } }, modifier = Modifier.fillMaxWidth(), label = { Text("ضریب اضافه‌کاری (مثلاً 1.4)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                            Text("تغییر این تنظیمات فقط روی ثبت‌های جدید اثر می‌گذارد؛ مبلغ ثبت‌های قبلی به‌صورت ذخیره‌شده باقی می‌ماند.", color = secondary, fontSize = 11.sp)
+                            PrimaryButton("ذخیره تنظیمات") {
+                                val monthlySalary = salaryText.toLongOrNull() ?: 0L
+                                val hourlyRate = hourlyRateText.toLongOrNull() ?: 0L
+                                val monthlyMinutes = monthlyMinutesText.toIntOrNull() ?: 0
+                                val dailyMinutes = dailyMinutesText.toIntOrNull()
+                                val multiplier = runCatching { BigDecimal(overtimeMultiplierText) }.getOrNull()
+                                val valid = dailyMinutes != null && dailyMinutes in 0..1440 &&
+                                    monthlyMinutes in 1..100000 && (workSettings.wageMode != WageMode.MONTHLY_SALARY || monthlySalary > 0) &&
+                                    (workSettings.wageMode != WageMode.HOURLY_RATE || hourlyRate > 0) &&
+                                    multiplier != null && multiplier >= BigDecimal.ZERO && multiplier <= BigDecimal("10")
+                                if (!valid) {
+                                    notice = "مقادیر تنظیمات کامل یا معتبر نیستند."
+                                } else {
+                                    val updated = workSettings.copy(
+                                        monthlySalaryToman = monthlySalary,
+                                        hourlyRateToman = hourlyRate,
+                                        monthlyRequiredMinutes = monthlyMinutes,
+                                        dailyRequiredMinutes = dailyMinutes!!,
+                                        overtimeMultiplier = multiplier!!,
+                                        settingsVersion = workSettings.settingsVersion + 1
+                                    )
+                                    workSettings = updated
+                                    saveWorkSettings(updated)
+                                    notice = "تنظیمات ذخیره شد."
+                                    page = "home"
                                 }
                             }
                         }
