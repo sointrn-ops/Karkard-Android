@@ -888,7 +888,10 @@ private fun KarbanApp(
                         Heading("گزارش‌ها", "خلاصه عملکرد و اطلاعات مالی", foreground, secondary)
                         Metric("روزهای ثبت‌شده", records.size.toString(), surface, secondary, Modifier.fillMaxWidth())
                         Metric("روزهای دارای اضافه‌کاری", records.count { total(it.overtimes) > 0 }.toString(), surface, secondary, Modifier.fillMaxWidth())
-                        Metric("مجموع مساعده‌ها", total(records.flatMap { it.advances }).toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
+                        Metric("مجموع مساعده‌ها (کل)", total(records.flatMap { it.advances }).toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
+                        val reportMonth = jalaliParts(LocalDate.now())
+                        val currentMonthAdvances = records.filter { val p = jalaliParts(LocalDate.parse(it.date)); p.first == reportMonth.first && p.second == reportMonth.second }.flatMap { it.advances }
+                        Metric("مجموع مساعده‌های این ماه", total(currentMonthAdvances).toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
                         Metric("مجموع ساعت اضافه‌کاری", total(records.flatMap { it.overtimes }).toString(), surface, secondary, Modifier.fillMaxWidth())
                         Metric("مجموع مبلغ اضافه‌کاری", records.sumOf { day -> day.overtimes.sumOf { it.amount } }.toLong().toString(), surface, secondary, Modifier.fillMaxWidth())
                         Box {
