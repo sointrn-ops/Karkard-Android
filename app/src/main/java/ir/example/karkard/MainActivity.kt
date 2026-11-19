@@ -543,6 +543,18 @@ private fun KarbanApp(
                             }
                         }
 
+                        val weekAdvanceTotal = total(weekRecords.flatMap { it.advances }).toLong()
+                        val weekOvertimeTotal = total(weekRecords.flatMap { it.overtimes })
+                        val weekOvertimeMoney = weekRecords.sumOf { it.overtimes.sumOf { item -> item.amount } }.toLong()
+                        Panel(surface) {
+                            Text("جمع‌بندی این هفته", color = AccentBright, fontWeight = FontWeight.Bold)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f)) { Text("مجموع مساعده", color = secondary, fontSize = 10.sp); Text("$weekAdvanceTotal تومان", color = foreground, fontWeight = FontWeight.Bold) }
+                                Column(Modifier.weight(1f)) { Text("ساعت اضافه‌کاری", color = secondary, fontSize = 10.sp); Text("$weekOvertimeTotal ساعت", color = AccentBright, fontWeight = FontWeight.Bold) }
+                            }
+                            Text("مبلغ اضافه‌کاری: $weekOvertimeMoney تومان", color = secondary, fontSize = 11.sp)
+                            Text("مانده پس از کسر مساعده: ${weekOvertimeMoney - weekAdvanceTotal} تومان", color = foreground, fontWeight = FontWeight.Bold)
+                        }
                         Text("جزئیات روز انتخاب‌شده", color = foreground, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(top = 5.dp, bottom = 8.dp))
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text(persianDate(selectedDate), color = AccentBright, fontSize = 19.sp, fontWeight = FontWeight.Black)
@@ -780,6 +792,7 @@ private fun KarbanApp(
                                         }
                                     }
                                     Text("مبلغ اضافه‌کاری: $monthOvertimeMoney تومان", color = secondary, fontSize = 11.sp)
+                                    Text("مانده پس از کسر مساعده: ${monthOvertimeMoney - monthAdvance} تومان", color = foreground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
                             }
                         }
