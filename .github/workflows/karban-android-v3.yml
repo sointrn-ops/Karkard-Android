@@ -34,4 +34,6 @@ jobs:
       - name: Publish APK to the website download URL
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload v3.0.1 app/build/outputs/apk/debug/app-debug.apk --repo "$GITHUB_REPOSITORY" --clobber
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk KARBAN-3.0.1.apk
+          gh release upload v3.0.1 KARBAN-3.0.1.apk --repo "$GITHUB_REPOSITORY" --clobber
