@@ -80,6 +80,8 @@ class MainActivity : ComponentActivity() {
         }.getOrDefault(WorkSettings())
         setContent { KarbanApp(initial, storageHealthy, preferences.getBoolean("light_theme", false),
             { value -> preferences.edit().putBoolean("light_theme", value).apply() },
+            ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup,
+            { uri, rows, scope -> KarbanPdf.write(this, uri, rows, scope) },
             initialSettings,
             { value -> preferences.edit().putString("work_settings", JSONObject()
                 .put("wageMode", value.wageMode.name)
@@ -88,9 +90,7 @@ class MainActivity : ComponentActivity() {
                 .put("monthlyRequiredMinutes", value.monthlyRequiredMinutes)
                 .put("dailyRequiredMinutes", value.dailyRequiredMinutes)
                 .put("overtimeMultiplier", value.overtimeMultiplier.toPlainString())
-                .put("settingsVersion", value.settingsVersion).toString()).apply() },
-            ::writeRecords, ::restoreRecords, ::exportBackup, ::readBackup,
-            { uri, rows, scope -> KarbanPdf.write(this, uri, rows, scope) }) }
+                .put("settingsVersion", value.settingsVersion).toString()).apply() }) }
     }
 
     private fun encryptionKey(): SecretKey {
@@ -722,7 +722,7 @@ private fun KarbanApp(
                                 val next = if (editingId == null) records + record else records.map { if (it.id == editingId) record else it }
                                 if (saveRecords(next)) {
                                     records = next; editingId = null; advances = listOf(WorkItem("", 0.0))
-                                    overtimes = listOf(WorkItem("", 0.0)); report = ""; page = "home"; notice = "اطلاعات ذخیره شد."
+                                    overtimes = listOf(WorkItem("", 0.0)); report = ""; workedDurationText = ""; manualOvertimeMinutesText = ""; manualOvertimeAmountText = ""; page = "home"; notice = "اطلاعات ذخیره شد."
                                 } else notice = "ذخیره‌سازی ناموفق بود؛ اطلاعات قبلی حفظ شدند."
                             }
                         }
