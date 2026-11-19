@@ -238,6 +238,8 @@ private fun KarbanApp(
     var isLight by remember { mutableStateOf(initialLightTheme) }
     var selectedDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var editingId by remember { mutableStateOf<String?>(null) }
+    var editingSettingsVersion by remember { mutableStateOf<Long?>(null) }
+    var preserveHistoricalCalculation by remember { mutableStateOf(false) }
     var advances by remember { mutableStateOf(listOf(WorkItem("", 0.0))) }
     var overtimes by remember { mutableStateOf(listOf(WorkItem("", 0.0))) }
     var report by remember { mutableStateOf("") }
@@ -304,6 +306,8 @@ private fun KarbanApp(
     fun beginNew(date: String = LocalDate.now().toString()) {
         selectedDate = date
         editingId = null
+        editingSettingsVersion = null
+        preserveHistoricalCalculation = false
         advances = listOf(WorkItem("", 0.0))
         overtimes = listOf(WorkItem("", 0.0))
         report = ""
@@ -315,13 +319,15 @@ private fun KarbanApp(
     fun edit(record: WorkRecord) {
         selectedDate = record.date
         editingId = record.id
+        editingSettingsVersion = record.settingsVersion
+        preserveHistoricalCalculation = record.settingsVersion != null && record.settingsVersion != workSettings.settingsVersion
         advances = record.advances.ifEmpty { listOf(WorkItem("", 0.0)) }
         overtimes = record.overtimes.ifEmpty { listOf(WorkItem("", 0.0)) }
         report = record.report
         workedDurationText = record.workedMinutes?.let { "%02d:%02d".format(it / 60, it % 60) } ?: ""
         manualOvertimeMinutesText = record.manualOvertimeMinutes?.toString() ?: ""
         manualOvertimeAmountText = record.manualOvertimeAmountToman?.toString() ?: ""
-        overtimes = record.overtimes.filterNot { it.title == "اضافه‌کاری محاسبه‌شده" }.ifEmpty { listOf(WorkItem("", 0.0)) }
+        overtimes = if (preserveHistoricalCalculation) record.overtimes else record.overtimes.filterNot { it.title == "اضافه‌کاری محاسبه‌شده" }.ifEmpty { listOf(WorkItem("", 0.0)) }
         page = "add"
     }
 
@@ -625,12 +631,14 @@ private fun KarbanApp(
                             Text("مدت کارکرد واقعی (ساعت:دقیقه)", color = foreground, fontWeight = FontWeight.Bold)
                             OutlinedTextField(
                                 value = workedDurationText,
+                                enabled = !preserveHistoricalCalculation,
                                 onValueChange = { value -> if (value.matches(Regex("\\d{0,3}(:\\d{0,2})?"))) workedDurationText = value },
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = { Text("مثلاً 08:45") },
                                 supportingText = { Text("برای محاسبه خودکار اضافه‌کاری، مدت کارکرد را وارد کن. دقت محاسبه یک دقیقه است.") },
                                 singleLine = true
                             )
+                            if (preserveHistoricalCalculation) Text("این سابقه با تنظیمات قبلی محاسبه شده؛ مبلغ و مدت آن برای حفظ تاریخچه ثابت نگه داشته شده است.", color = secondary, fontSize = 11.sp)
                             val parsedWorkedMinutes = runCatching {
                                 if (workedDurationText.isBlank()) null else CalculationEngine.durationMinutes(workedDurationText)
                             }.getOrNull()
@@ -651,6 +659,7 @@ private fun KarbanApp(
                             }
                             OutlinedTextField(
                                 value = manualOvertimeMinutesText,
+                                enabled = !preserveHistoricalCalculation,
                                 onValueChange = { manualOvertimeMinutesText = it.filter(Char::isDigit) },
                                 modifier = Modifier.fillMaxWidth(),
                                 label = { Text("اصلاح دستی مدت اضافه‌کاری (دقیقه) — اختیاری") },
@@ -659,6 +668,7 @@ private fun KarbanApp(
                             )
                             OutlinedTextField(
                                 value = manualOvertimeAmountText,
+                                enabled = !preserveHistoricalCalculation,
                                 onValueChange = { manualOvertimeAmountText = it.filter(Char::isDigit) },
                                 modifier = Modifier.fillMaxWidth(),
                                 label = { Text("اصلاح دستی مبلغ اضافه‌کاری (تومان) — اختیاری") },
@@ -717,11 +727,11 @@ private fun KarbanApp(
                                 val record = WorkRecord(
                                     editingId ?: System.currentTimeMillis().toString(), selectedDate,
                                     advances.filter { it.title.isNotBlank() || it.value > 0 },
-                                    storedOvertimes, report, durationMinutes, manualMinutes, manualAmount, workSettings.settingsVersion
+                                    storedOvertimes, report, durationMinutes, manualMinutes, manualAmount, editingSettingsVersion ?: workSettings.settingsVersion
                                 )
                                 val next = if (editingId == null) records + record else records.map { if (it.id == editingId) record else it }
                                 if (saveRecords(next)) {
-                                    records = next; editingId = null; advances = listOf(WorkItem("", 0.0))
+                                    records = next; editingId = null; editingSettingsVersion = null; preserveHistoricalCalculation = false; advances = listOf(WorkItem("", 0.0))
                                     overtimes = listOf(WorkItem("", 0.0)); report = ""; workedDurationText = ""; manualOvertimeMinutesText = ""; manualOvertimeAmountText = ""; page = "home"; notice = "اطلاعات ذخیره شد."
                                 } else notice = "ذخیره‌سازی ناموفق بود؛ اطلاعات قبلی حفظ شدند."
                             }
