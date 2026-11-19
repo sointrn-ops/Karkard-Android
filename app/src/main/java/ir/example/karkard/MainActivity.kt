@@ -716,8 +716,9 @@ private fun KarbanApp(
                                 val manualMinutes = manualOvertimeMinutesText.toIntOrNull()
                                 val manualAmount = manualOvertimeAmountText.toLongOrNull()
                                 val computed = durationMinutes?.let { runCatching { CalculationEngine.calculate(it, workSettings, manualMinutes, manualAmount) }.getOrNull() }
-                                if (workedDurationText.isNotBlank() && (durationMinutes == null || computed == null)) {
-                                    notice = "مدت کارکرد یا تنظیمات محاسبه معتبر نیست."
+                                if ((workedDurationText.isNotBlank() || manualOvertimeMinutesText.isNotBlank() || manualOvertimeAmountText.isNotBlank()) &&
+                                    (durationMinutes == null || computed == null || workSettings.effectiveHourlyRate() <= BigDecimal.ZERO)) {
+                                    notice = "مدت کارکرد معتبر نیست یا ابتدا باید تنظیمات حقوق را کامل و ذخیره کنی."
                                     return@PrimaryButton
                                 }
                                 val storedOvertimes = overtimes.filter { it.title.isNotBlank() || it.value > 0 || it.amount > 0 }.toMutableList()
@@ -860,7 +861,8 @@ private fun KarbanApp(
                                 val dailyMinutes = dailyMinutesText.toIntOrNull()
                                 val multiplier = runCatching { BigDecimal(overtimeMultiplierText) }.getOrNull()
                                 val valid = dailyMinutes != null && dailyMinutes in 0..1440 &&
-                                    monthlyMinutes in 1..100000 && (workSettings.wageMode != WageMode.MONTHLY_SALARY || monthlySalary > 0) &&
+                                    (workSettings.wageMode != WageMode.MONTHLY_SALARY || monthlyMinutes in 1..100000) &&
+                                    (workSettings.wageMode != WageMode.MONTHLY_SALARY || monthlySalary > 0) &&
                                     (workSettings.wageMode != WageMode.HOURLY_RATE || hourlyRate > 0) &&
                                     multiplier != null && multiplier >= BigDecimal.ZERO && multiplier <= BigDecimal("10")
                                 if (!valid) {
