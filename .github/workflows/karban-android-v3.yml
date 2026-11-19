@@ -28,7 +28,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KARBAN-Android-3.0.1-debug
+          name: KARBAN-Android-3.2.0-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish APK to the website download URL
@@ -36,4 +36,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk KARBAN-3.2.0.apk
+          gh release view v3.2.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create v3.2.0 --title "KARBAN 3.2.0" --notes "نسخه ۳.۲.۰ کاربان؛ شامل ثبت کارکرد روزانه و گزارش‌های هفتگی و ماهانه."
           gh release upload v3.2.0 KARBAN-3.2.0.apk --repo "$GITHUB_REPOSITORY" --clobber
