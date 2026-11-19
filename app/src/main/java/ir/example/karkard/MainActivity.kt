@@ -365,11 +365,6 @@ private fun KarbanApp(
                         val monthAdvance = total(monthRecords.flatMap { it.advances }).toLong()
                         val monthOvertime = total(monthRecords.flatMap { it.overtimes })
                         val monthOvertimeMoney = monthRecords.sumOf { day -> day.overtimes.sumOf { it.amount } }.toLong()
-                        val monthBalance = monthOvertimeMoney - monthAdvance
-                        val weekRange = records.filter { val d = LocalDate.parse(it.date); !d.isBefore(week) && !d.isAfter(week.plusDays(6)) }
-                        val weekAdvance = total(weekRange.flatMap { it.advances }).toLong()
-                        val weekHours = total(weekRange.flatMap { it.overtimes })
-                        val weekOvertimeMoney = weekRange.sumOf { day -> day.overtimes.sumOf { it.amount } }.toLong()
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp)) {
                                 Text("داشبورد کاربان", color = AccentBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
@@ -400,14 +395,12 @@ private fun KarbanApp(
                             }
                             Panel(surface) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("عملکرد این هفته", color = foreground, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    TextButton(onClick = { page = "week" }) { Text("جزئیات") }
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("مرور روزهای هفته", color = foreground, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text("جزئیات هر روز را جداگانه ببین؛ بدون جمع هفتگی.", color = secondary, fontSize = 10.sp)
+                                    }
+                                    TextButton(onClick = { page = "week" }) { Text("مشاهده هفته") }
                                 }
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Column(Modifier.weight(1f)) { Text("مساعده", color = secondary, fontSize = 10.sp); Text("${weekAdvance} تومان", color = foreground, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-                                    Column(Modifier.weight(1f)) { Text("اضافه‌کاری", color = secondary, fontSize = 10.sp); Text("$weekHours ساعت", color = AccentBright, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-                                }
-                                Text("مبلغ اضافه‌کاری: $weekOvertimeMoney تومان", color = secondary, fontSize = 11.sp)
                             }
                             Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                                 Column(Modifier.weight(1f).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(19.dp)).background(surface, RoundedCornerShape(19.dp)).padding(15.dp)) {
@@ -559,23 +552,9 @@ private fun KarbanApp(
                                     }
                                 }
                             }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("روزهای ثبت‌شده: ${weekRecords.map { it.date }.distinct().size}", color = secondary, fontSize = 11.sp)
-                                Text("اضافه‌کاری: ${total(weekRecords.flatMap { it.overtimes })} ساعت", color = AccentBright, fontSize = 11.sp)
-                            }
+                            Text("نشانگر سبز یعنی برای آن روز گزارشی ثبت شده است.", color = secondary, fontSize = 10.sp)
                         }
 
-                        val weekAdvanceTotal = total(weekRecords.flatMap { it.advances }).toLong()
-                        val weekOvertimeTotal = total(weekRecords.flatMap { it.overtimes })
-                        val weekOvertimeMoney = weekRecords.sumOf { it.overtimes.sumOf { item -> item.amount } }.toLong()
-                        Panel(surface) {
-                            Text("جمع‌بندی این هفته", color = AccentBright, fontWeight = FontWeight.Bold)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Column(Modifier.weight(1f)) { Text("مجموع مساعده", color = secondary, fontSize = 10.sp); Text("$weekAdvanceTotal تومان", color = foreground, fontWeight = FontWeight.Bold) }
-                                Column(Modifier.weight(1f)) { Text("ساعت اضافه‌کاری", color = secondary, fontSize = 10.sp); Text("$weekOvertimeTotal ساعت", color = AccentBright, fontWeight = FontWeight.Bold) }
-                            }
-                            Text("مبلغ اضافه‌کاری: $weekOvertimeMoney تومان", color = secondary, fontSize = 11.sp)
-                        }
                         Text("جزئیات روز انتخاب‌شده", color = foreground, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(top = 5.dp, bottom = 8.dp))
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text(persianDate(selectedDate), color = AccentBright, fontSize = 19.sp, fontWeight = FontWeight.Black)
@@ -640,7 +619,7 @@ private fun KarbanApp(
                                 Text("اضافه‌کاری", color = foreground, fontWeight = FontWeight.Bold)
                                 TextButton(onClick = { overtimes = overtimes + WorkItem("", 0.0) }) { Text("+ افزودن") }
                             }
-                            Text("ساعت و مبلغ اضافه‌کاری را خودت برای همین روز وارد کن؛ برنامه آن‌ها را در گزارش هفتگی و ماهانه جمع می‌زند.", color = secondary, fontSize = 10.sp)
+                            Text("ساعت و مبلغ اضافه‌کاری را جداگانه و دستی برای همین روز وارد کن. جمع‌بندی خودکار فقط در گزارش ماهانه انجام می‌شود.", color = secondary, fontSize = 10.sp)
                             OvertimeEditor(overtimes, alternate, 0.0, 1.0) { overtimes = it }
                             val overtimeHours = overtimes.sumOf { it.value }
                             val overtimeMoney = overtimes.sumOf { it.amount }
@@ -1109,7 +1088,7 @@ private fun OvertimeEditor(items: List<WorkItem>, background: Color, hourlyRate:
                 OutlinedTextField(value = if (item.value == 0.0) "" else item.value.toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(value = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("ساعت") }, label = { Text("مدت (ساعت)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
                 OutlinedTextField(value = if (item.amount == 0.0) "" else item.amount.toLong().toString(), onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(amount = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) }, modifier = Modifier.weight(1f), placeholder = { Text("مبلغ") }, label = { Text("مبلغ (تومان)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
             }
-            Text("مبلغ اضافه‌کاری را خودت وارد کن؛ جمع ماهانه و هفتگی به‌صورت خودکار محاسبه می‌شود.", color = Muted, fontSize = 10.sp)
+            Text("مبلغ اضافه‌کاری مستقل از ساعت است و باید دستی وارد شود. جمع کل فقط در گزارش ماهانه نمایش داده می‌شود.", color = Muted, fontSize = 10.sp)
         }
     }
 }
