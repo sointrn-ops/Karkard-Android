@@ -930,7 +930,7 @@ private fun KarbanApp(
                     }
                     "about" -> {
                         val context = LocalContext.current
-                        Heading("درباره برنامه", "KARBAN · نسخه 3.0", foreground, secondary)
+                        Heading("درباره برنامه", "KARBAN · نسخه 3.0.1", foreground, secondary)
                         Panel(surface, Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             Text("KARBAN", color = AccentBright, fontSize = 26.sp, fontWeight = FontWeight.Black)
                             Text("Work & Performance Tracker", color = secondary)
@@ -939,7 +939,7 @@ private fun KarbanApp(
                             Divider(color = secondary.copy(alpha = 0.3f))
                             Text("مشخصات برنامه", color = AccentBright, fontWeight = FontWeight.Bold)
                             Text("نام برنامه: KARBAN", color = foreground)
-                            Text("نسخه: 3.0", color = foreground)
+                            Text("نسخه: 3.0.1", color = foreground)
                             Text("سال انتشار: ۱۴۰۵", color = foreground)
                             Text("سازنده: محمد جواد احمدی", color = foreground)
                             Divider(color = secondary.copy(alpha = 0.3f))
