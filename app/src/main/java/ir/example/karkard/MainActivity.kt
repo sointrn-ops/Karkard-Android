@@ -681,10 +681,10 @@ private fun KarbanApp(
                             }
                             ItemEditor(advances, "عنوان مساعده", "مبلغ", alternate) { advances = it }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("اضافه‌کاری", color = foreground, fontWeight = FontWeight.Bold)
+                                Text("موارد اضافه‌کاری اضافی", color = foreground, fontWeight = FontWeight.Bold)
                                 TextButton(onClick = { overtimes = overtimes + WorkItem("", 0.0) }) { Text("+ افزودن") }
                             }
-                            Text("برای هر مورد، ساعت و مبلغ را جداگانه وارد کنید.", color = secondary, fontSize = 10.sp)
+                            Text("این موارد جدا از اضافه‌کاری خودکار هستند و به جمع کل اضافه می‌شوند.", color = secondary, fontSize = 10.sp)
                             OvertimeEditor(overtimes, alternate) { overtimes = it }
                             val overtimeHours = overtimes.sumOf { it.value }
                             val overtimeMoney = overtimes.sumOf { it.amount }
