@@ -31,7 +31,7 @@ data class WorkSettings(
         WageMode.MONTHLY_SALARY -> if (monthlyRequiredMinutes > 0) {
             BigDecimal.valueOf(monthlySalaryToman)
                 .multiply(BigDecimal.valueOf(60))
-                .divide(BigDecimal.valueOf(monthlyRequiredMinutes), 8, RoundingMode.HALF_UP)
+                .divide(BigDecimal.valueOf(monthlyRequiredMinutes.toLong()), 8, RoundingMode.HALF_UP)
         } else BigDecimal.ZERO
     }
 }
