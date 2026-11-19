@@ -25,6 +25,6 @@
 - تلفن دوم: 09017975131
 
 ## ساخت APK
-گردش‌کار GitHub Actions در مسیر .github/workflows/karban-android-v3.yml پس از push به شاخه بازسازی اجرا می‌شود و APK آزمایشی را به‌عنوان artifact منتشر می‌کند.
+گردش‌کار GitHub Actions در مسیر .github/workflows/karban-android-v3.yml پس از push به شاخه نسخه 3.0.1 اجرا می‌شود و APK آزمایشی را به‌عنوان artifact منتشر می‌کند.
 
 این شاخه هنوز نسخه انتشار نهایی و امضاشده نیست. APK باید پس از build موفق و آزمون نصب و ذخیره‌سازی روی دستگاه، منتشر شود.
