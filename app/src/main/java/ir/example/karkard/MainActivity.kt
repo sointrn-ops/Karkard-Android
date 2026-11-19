@@ -225,6 +225,7 @@ private fun KarbanApp(
     var deleteTarget by remember { mutableStateOf<WorkRecord?>(null) }
     var pendingRestore by remember { mutableStateOf<List<WorkRecord>?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
+    var showHeaderMenu by remember { mutableStateOf(false) }
     var calendarYear by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).first) }
     var calendarMonth by remember { mutableIntStateOf(jalaliParts(LocalDate.parse(selectedDate)).second) }
 
@@ -307,43 +308,31 @@ private fun KarbanApp(
                 }
             }
         ) { padding ->
-            Column(Modifier.fillMaxSize().background(background).padding(padding).padding(horizontal = 20.dp)) {
+            Column(Modifier.fillMaxSize().background(background).padding(padding).padding(horizontal = 16.dp)) {
                 Row(
-                    Modifier.fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 18.dp)
-                        .border(1.dp, if (isLight) Color(0xFFE3E9ED) else Outline.copy(alpha = 0.75f), RoundedCornerShape(22.dp))
-                        .background(surface, RoundedCornerShape(22.dp))
-                        .padding(horizontal = 16.dp, vertical = 15.dp),
+                    Modifier.fillMaxWidth().padding(top = 7.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(46.dp).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(AccentBright, Accent)), RoundedCornerShape(16.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("K", color = Color(0xFF07110E), fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Box(Modifier.size(38.dp).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(AccentBright, Accent)), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                            Text("K", color = Color(0xFF07110E), fontSize = 21.sp, fontWeight = FontWeight.Black)
                         }
-                        Spacer(Modifier.width(9.dp))
-                        Column {
-                            Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.8.sp, fontSize = 16.sp)
-                            Text("WORKSPACE  /  3.2.0", color = secondary, fontSize = 8.sp, letterSpacing = 1.3.sp)
+                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                            Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.sp, fontSize = 15.sp)
+                            Text("مدیریت کارکرد", color = secondary, fontSize = 9.sp)
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("امروز", color = secondary, fontSize = 10.sp)
-                            Text(persianDate(LocalDate.now().toString()), color = foreground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(if (isLight) "☾" else "☀", color = foreground, fontSize = 19.sp,
+                            modifier = Modifier.clickable { isLight = !isLight; saveTheme(isLight) }.padding(9.dp))
+                        Box {
+                            Text("⋮", color = foreground, fontSize = 23.sp, modifier = Modifier.clickable { showHeaderMenu = true }.padding(horizontal = 9.dp, vertical = 5.dp))
+                            DropdownMenu(expanded = showHeaderMenu, onDismissRequest = { showHeaderMenu = false }) {
+                                DropdownMenuItem(text = { Text("تنظیمات") }, onClick = { showHeaderMenu = false; page = "settings" })
+                                DropdownMenuItem(text = { Text("درباره برنامه") }, onClick = { showHeaderMenu = false; page = "about" })
+                            }
                         }
-                        Spacer(Modifier.width(5.dp))
-                        Text("تنظیمات", color = AccentBright, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { page = "settings" }.padding(horizontal = 5.dp, vertical = 8.dp))
-                        Text("درباره", color = AccentBright, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { page = "about" }.padding(horizontal = 5.dp, vertical = 8.dp))
-                        Text(
-                            if (isLight) "☾" else "☀",
-                            color = foreground,
-                            fontSize = 20.sp,
-                            modifier = Modifier.clickable { isLight = !isLight; saveTheme(isLight) }.padding(5.dp)
-                        )
                     }
                 }
 
@@ -402,21 +391,30 @@ private fun KarbanApp(
                                     TextButton(onClick = { page = "week" }) { Text("مشاهده هفته") }
                                 }
                             }
-                            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Column(Modifier.weight(1f).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(19.dp)).background(surface, RoundedCornerShape(19.dp)).padding(15.dp)) {
-                                    Text("روزهای ثبت‌شده", color = secondary, fontSize = 11.sp)
-                                    Text(records.size.toString(), color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                                    Text("در کل", color = secondary, fontSize = 10.sp)
+                            Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                    Column(Modifier.weight(1f).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(16.dp)).background(surface, RoundedCornerShape(16.dp)).padding(13.dp)) {
+                                        Text("روزهای ثبت‌شده", color = secondary, fontSize = 10.sp)
+                                        Text(records.size.toString(), color = foreground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                                        Text("در کل", color = secondary, fontSize = 9.sp)
+                                    }
+                                    Column(Modifier.weight(1f).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(16.dp)).background(surface, RoundedCornerShape(16.dp)).padding(13.dp)) {
+                                        Text("اضافه‌کاری", color = secondary, fontSize = 10.sp)
+                                        Text(monthOvertime.toString(), color = AccentBright, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                                        Text("ساعت این ماه", color = secondary, fontSize = 9.sp)
+                                    }
                                 }
-                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
-                                    Text("اضافه‌کاری", color = secondary, fontSize = 11.sp)
-                                    Text(monthOvertime.toString(), color = AccentBright, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                                    Text("ساعت این ماه", color = secondary, fontSize = 10.sp)
-                                }
-                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(18.dp)).padding(14.dp)) {
-                                    Text("امروز", color = secondary, fontSize = 11.sp)
-                                    Text(todayRecords.size.toString(), color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                                    Text("ثبت", color = secondary, fontSize = 10.sp)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                    Column(Modifier.weight(1f).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(16.dp)).background(surface, RoundedCornerShape(16.dp)).padding(13.dp)) {
+                                        Text("ثبت امروز", color = secondary, fontSize = 10.sp)
+                                        Text(todayRecords.size.toString(), color = foreground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                                        Text("گزارش", color = secondary, fontSize = 9.sp)
+                                    }
+                                    Column(Modifier.weight(1f).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(16.dp)).background(surface, RoundedCornerShape(16.dp)).padding(13.dp)) {
+                                        Text("مبلغ اضافه‌کاری", color = secondary, fontSize = 10.sp)
+                                        Text(monthOvertimeMoney.toString(), color = AccentBright, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        Text("تومان · این ماه", color = secondary, fontSize = 9.sp)
+                                    }
                                 }
                             }
                             Text("دسترسی سریع", color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 19.dp, bottom = 9.dp))
@@ -680,18 +678,20 @@ private fun KarbanApp(
 
                         Heading("آرشیو سوابق", "جست‌وجو و مدیریت کارکردهای ثبت‌شده", foreground, secondary)
 
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
-                                Text("کل سوابق", color = secondary, fontSize = 10.sp)
-                                Text(records.size.toString(), color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
+                                    Text("کل سوابق", color = secondary, fontSize = 10.sp)
+                                    Text(records.size.toString(), color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                                }
+                                Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
+                                    Text("نتیجه فیلتر", color = secondary, fontSize = 10.sp)
+                                    Text(filteredRecords.size.toString(), color = AccentBright, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                                }
                             }
-                            Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
-                                Text("نتیجه فیلتر", color = secondary, fontSize = 10.sp)
-                                Text(filteredRecords.size.toString(), color = AccentBright, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                            }
-                            Column(Modifier.weight(1f).background(surface, RoundedCornerShape(15.dp)).padding(12.dp)) {
+                            Column(Modifier.fillMaxWidth().background(surface, RoundedCornerShape(15.dp)).padding(horizontal = 12.dp, vertical = 9.dp)) {
                                 Text("ماه‌های دارای سابقه", color = secondary, fontSize = 10.sp)
-                                Text(monthGroups.toString(), color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                                Text(monthGroups.toString(), color = foreground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -704,29 +704,23 @@ private fun KarbanApp(
                             placeholder = { Text("جست‌وجو در تاریخ، گزارش یا عنوان...") }
                         )
 
-                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(Modifier.weight(1f)) {
-                                OutlinedButton(onClick = { monthMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text(monthNames[archiveMonth], maxLines = 1, color = foreground)
+                        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(Modifier.weight(1f)) {
+                                    OutlinedButton(onClick = { monthMenuOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(monthNames[archiveMonth], maxLines = 1, color = foreground) }
+                                    DropdownMenu(expanded = monthMenuOpen, onDismissRequest = { monthMenuOpen = false }) {
+                                        monthNames.forEachIndexed { index, name -> DropdownMenuItem(text = { Text(name) }, onClick = { archiveMonth = index; monthMenuOpen = false }) }
+                                    }
                                 }
-                                DropdownMenu(expanded = monthMenuOpen, onDismissRequest = { monthMenuOpen = false }) {
-                                    monthNames.forEachIndexed { index, name ->
-                                        DropdownMenuItem(text = { Text(name) }, onClick = { archiveMonth = index; monthMenuOpen = false })
+                                Box(Modifier.weight(1f)) {
+                                    OutlinedButton(onClick = { yearMenuOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(if (archiveYear == 0) "همه سال‌ها" else archiveYear.toString(), color = foreground) }
+                                    DropdownMenu(expanded = yearMenuOpen, onDismissRequest = { yearMenuOpen = false }) {
+                                        DropdownMenuItem(text = { Text("همه سال‌ها") }, onClick = { archiveYear = 0; yearMenuOpen = false })
+                                        availableYears.forEach { year -> DropdownMenuItem(text = { Text(year.toString()) }, onClick = { archiveYear = year; yearMenuOpen = false }) }
                                     }
                                 }
                             }
-                            Box(Modifier.weight(1f)) {
-                                OutlinedButton(onClick = { yearMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (archiveYear == 0) "همه سال‌ها" else archiveYear.toString(), color = foreground)
-                                }
-                                DropdownMenu(expanded = yearMenuOpen, onDismissRequest = { yearMenuOpen = false }) {
-                                    DropdownMenuItem(text = { Text("همه سال‌ها") }, onClick = { archiveYear = 0; yearMenuOpen = false })
-                                    availableYears.forEach { year ->
-                                        DropdownMenuItem(text = { Text(year.toString()) }, onClick = { archiveYear = year; yearMenuOpen = false })
-                                    }
-                                }
-                            }
-                            TextButton(onClick = { search = ""; archiveMonth = 0; archiveYear = 0 }) { Text("پاک‌سازی") }
+                            TextButton(onClick = { search = ""; archiveMonth = 0; archiveYear = 0 }, modifier = Modifier.align(Alignment.End)) { Text("پاک‌سازی فیلترها") }
                         }
 
                         if (filteredRecords.isEmpty()) {
@@ -1043,7 +1037,7 @@ private fun Heading(title: String, subtitle: String, color: Color, muted: Color)
 }
 @Composable
 private fun Panel(color: Color, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().padding(bottom = 13.dp).border(1.dp, Outline.copy(alpha = 0.82f), RoundedCornerShape(22.dp)).background(color, RoundedCornerShape(22.dp)).padding(horizontal = 17.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(13.dp), content = content)
+    Column(modifier.fillMaxWidth().padding(bottom = 13.dp).border(1.dp, Outline.copy(alpha = 0.82f), RoundedCornerShape(18.dp)).background(color, RoundedCornerShape(18.dp)).padding(horizontal = 15.dp, vertical = 15.dp), verticalArrangement = Arrangement.spacedBy(13.dp), content = content)
 }
 @Composable
 private fun Metric(label: String, value: String, surface: Color, muted: Color, modifier: Modifier = Modifier) {
@@ -1062,16 +1056,34 @@ private fun PrimaryButton(label: String, action: () -> Unit) {
 @Composable
 private fun ItemEditor(items: List<WorkItem>, titleHint: String, valueHint: String, background: Color, onChange: (List<WorkItem>) -> Unit) {
     items.forEachIndexed { index, item ->
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            OutlinedTextField(item.title, { value -> onChange(items.toMutableList().also { it[index] = item.copy(title = value) }) },
-                modifier = Modifier.weight(1.2f), placeholder = { Text(titleHint, fontSize = 10.sp) }, singleLine = true)
-            OutlinedTextField(if (item.value == 0.0) "" else item.value.toString(), { value ->
-                onChange(items.toMutableList().also { it[index] = item.copy(value = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) })
-            }, modifier = Modifier.weight(1f), placeholder = { Text(valueHint, fontSize = 10.sp) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-            Text("×", color = Color(0xFFED6262), fontSize = 22.sp, modifier = Modifier.clickable {
-                onChange(items.toMutableList().also { it.removeAt(index) }.ifEmpty { listOf(WorkItem("", 0.0)) })
-            }.padding(6.dp))
+        Column(
+            Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                .border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(15.dp))
+                .background(background, RoundedCornerShape(15.dp)).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = item.title,
+                onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(title = value) }) },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(titleHint) },
+                label = { Text("عنوان") },
+                singleLine = true
+            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = if (item.value == 0.0) "" else item.value.toString(),
+                    onValueChange = { value -> onChange(items.toMutableList().also { it[index] = item.copy(value = value.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0) }) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(valueHint) },
+                    label = { Text("مبلغ (تومان)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
+                )
+                TextButton(onClick = { onChange(items.toMutableList().also { it.removeAt(index) }.ifEmpty { listOf(WorkItem("", 0.0)) }) }) {
+                    Text("حذف", color = Color(0xFFED6262))
+                }
+            }
         }
     }
 }
