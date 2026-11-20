@@ -287,14 +287,17 @@ private fun KarbanApp(
         page = "add"
     }
 
-    MaterialTheme(colorScheme = if (isLight) lightColorScheme(primary = Accent, background = background, surface = surface, onSurface = foreground) else darkColorScheme(primary = AccentBright, background = background, surface = surface, onSurface = foreground)) {
+    MaterialTheme(
+        colorScheme = if (isLight) lightColorScheme(primary = Accent, secondary = Color(0xFF267653), background = background, surface = surface, surfaceVariant = alternate, onSurface = foreground, onBackground = foreground, outline = Color(0xFFB9D1C2)) else darkColorScheme(primary = AccentBright, secondary = Color(0xFF62C99A), background = background, surface = surface, surfaceVariant = alternate, onSurface = foreground, onBackground = foreground, outline = Outline),
+        shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(18.dp), large = RoundedCornerShape(24.dp))
+    ) {
         Scaffold(
             containerColor = background,
             bottomBar = {
                 NavigationBar(
                     containerColor = surface,
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.border(1.dp, if (isLight) Color(0xFFDCE9E0) else Outline.copy(alpha = 0.8f))
+                    tonalElevation = 5.dp,
+                    modifier = Modifier.border(1.dp, if (isLight) Color(0xFFDCE9E0) else Outline.copy(alpha = 0.8f), RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                 ) {
                     listOf("home" to "خانه", "week" to "هفتگی", "add" to "ثبت", "records" to "سوابق", "reports" to "گزارش").forEach { (key, label) ->
                         NavigationBarItem(
@@ -310,7 +313,7 @@ private fun KarbanApp(
         ) { padding ->
             Column(Modifier.fillMaxSize().background(background).padding(padding).padding(horizontal = 16.dp)) {
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 7.dp, bottom = 10.dp),
+                    Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp).background(surface, RoundedCornerShape(18.dp)).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(18.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1029,27 +1032,27 @@ internal fun persianDate(iso: String): String = runCatching {
 
 @Composable
 private fun Heading(title: String, subtitle: String, color: Color, muted: Color) {
-    Column(Modifier.padding(top = 10.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(title, color = color, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.65).sp)
+    Column(Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 16.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp)).border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(title, color = color, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.45).sp)
         if (subtitle.isNotBlank()) Text(subtitle, color = muted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Box(Modifier.padding(top = 7.dp).width(32.dp).height(3.dp).background(Accent, RoundedCornerShape(20.dp)))
+        Box(Modifier.padding(top = 5.dp).width(38.dp).height(4.dp).background(Accent, RoundedCornerShape(20.dp)))
     }
 }
 @Composable
 private fun Panel(color: Color, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().padding(bottom = 13.dp).border(1.dp, Outline.copy(alpha = 0.82f), RoundedCornerShape(18.dp)).background(color, RoundedCornerShape(18.dp)).padding(horizontal = 15.dp, vertical = 15.dp), verticalArrangement = Arrangement.spacedBy(13.dp), content = content)
+    Column(modifier.fillMaxWidth().padding(bottom = 13.dp).border(1.dp, Outline.copy(alpha = 0.72f), RoundedCornerShape(22.dp)).background(color, RoundedCornerShape(22.dp)).padding(horizontal = 17.dp, vertical = 17.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
 }
 @Composable
 private fun Metric(label: String, value: String, surface: Color, muted: Color, modifier: Modifier = Modifier) {
-    Column(modifier.padding(bottom = 9.dp).border(1.dp, Outline.copy(alpha = 0.82f), RoundedCornerShape(20.dp)).background(surface, RoundedCornerShape(20.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        Box(Modifier.width(24.dp).height(3.dp).background(Accent.copy(alpha = 0.9f), RoundedCornerShape(8.dp)))
+    Column(modifier.padding(bottom = 9.dp).border(1.dp, Outline.copy(alpha = 0.72f), RoundedCornerShape(22.dp)).background(surface, RoundedCornerShape(22.dp)).padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.width(30.dp).height(4.dp).background(Accent, RoundedCornerShape(8.dp)))
         Text(label, color = muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-        Text(value, color = AccentBright, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp)
+        Text(value, color = MaterialTheme.colorScheme.primary, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp)
     }
 }
 @Composable
 private fun PrimaryButton(label: String, action: () -> Unit) {
-    Button(onClick = action, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF051A11)), shape = RoundedCornerShape(17.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 1.dp)) {
+    Button(onClick = action, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color.White), shape = RoundedCornerShape(18.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp)) {
         Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, letterSpacing = 0.1.sp)
     }
 }
@@ -1057,9 +1060,9 @@ private fun PrimaryButton(label: String, action: () -> Unit) {
 private fun ItemEditor(items: List<WorkItem>, titleHint: String, valueHint: String, background: Color, onChange: (List<WorkItem>) -> Unit) {
     items.forEachIndexed { index, item ->
         Column(
-            Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                .border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(15.dp))
-                .background(background, RoundedCornerShape(15.dp)).padding(12.dp),
+            Modifier.fillMaxWidth().padding(bottom = 9.dp)
+                .border(1.dp, Outline.copy(alpha = 0.65f), RoundedCornerShape(18.dp))
+                .background(background, RoundedCornerShape(18.dp)).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedTextField(
@@ -1090,7 +1093,7 @@ private fun ItemEditor(items: List<WorkItem>, titleHint: String, valueHint: Stri
 @Composable
 private fun OvertimeEditor(items: List<WorkItem>, background: Color, hourlyRate: Double, multiplier: Double, onChange: (List<WorkItem>) -> Unit) {
     items.forEachIndexed { index, item ->
-        Column(Modifier.fillMaxWidth().padding(bottom = 8.dp).background(background, RoundedCornerShape(14.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 9.dp).border(1.dp, Outline.copy(alpha = 0.6f), RoundedCornerShape(18.dp)).background(background, RoundedCornerShape(18.dp)).padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("مورد اضافه‌کاری ${index + 1}", color = AccentBright, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 TextButton(onClick = { onChange(items.toMutableList().also { it.removeAt(index) }.ifEmpty { listOf(WorkItem("", 0.0)) }) }) { Text("حذف", color = Color(0xFFED6262)) }
@@ -1112,7 +1115,7 @@ private fun RecordCard(record: WorkRecord, surface: Color, foreground: Color, mu
             Text(persianDate(record.date), color = AccentBright, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column(Modifier.weight(1f).background(CardAlt.copy(alpha = 0.72f), RoundedCornerShape(13.dp)).padding(11.dp)) {
+            Column(Modifier.weight(1f).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(15.dp)).padding(13.dp)) {
                 Text("مساعده", color = muted, fontSize = 10.sp)
                 Text(record.advances.sumOf { it.value }.toLong().toString(), color = foreground, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
