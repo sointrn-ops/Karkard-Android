@@ -44,14 +44,14 @@ import javax.crypto.spec.GCMParameterSpec
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 
-private val Accent = Color(0xFFB7E36A)
-private val AccentBright = Color(0xFFD1F58B)
-private val AppBg = Color(0xFF090D0B)
-private val CardBg = Color(0xFF121916)
-private val CardAlt = Color(0xFF1B2620)
-private val Muted = Color(0xFF91A096)
-private val MainText = Color(0xFFF0F4EE)
-private val Outline = Color(0xFF29372F)
+private val Accent = Color(0xFF0D805A)
+private val AccentBright = Color(0xFF38B982)
+private val AppBg = Color(0xFF07130F)
+private val CardBg = Color(0xFF0F2018)
+private val CardAlt = Color(0xFF183528)
+private val Muted = Color(0xFF91AA9B)
+private val MainText = Color(0xFFEDF7F0)
+private val Outline = Color(0xFF294A39)
 
 data class WorkItem(val title: String, val value: Double, val amount: Double = 0.0)
 data class WorkRecord(val id: String, val date: String, val advances: List<WorkItem>, val overtimes: List<WorkItem>, val report: String)
@@ -260,11 +260,11 @@ private fun KarbanApp(
         }
     }
 
-    val background = if (isLight) Color(0xFFF4F6F1) else AppBg
+    val background = if (isLight) Color(0xFFF3F8F4) else AppBg
     val surface = if (isLight) Color(0xFFFFFFFF) else CardBg
-    val alternate = if (isLight) Color(0xFFEBF0E8) else CardAlt
-    val foreground = if (isLight) Color(0xFF172018) else MainText
-    val secondary = if (isLight) Color(0xFF6C796D) else Muted
+    val alternate = if (isLight) Color(0xFFE7F1EA) else CardAlt
+    val foreground = if (isLight) Color(0xFF12251A) else MainText
+    val secondary = if (isLight) Color(0xFF64796B) else Muted
 
     fun total(items: List<WorkItem>) = items.sumOf { it.value }
     fun persist(next: List<WorkRecord>) {
@@ -294,7 +294,7 @@ private fun KarbanApp(
                 NavigationBar(
                     containerColor = surface,
                     tonalElevation = 0.dp,
-                    modifier = Modifier.border(1.dp, if (isLight) Color(0xFFE2E8EC) else Outline.copy(alpha = 0.8f))
+                    modifier = Modifier.border(1.dp, if (isLight) Color(0xFFDCE9E0) else Outline.copy(alpha = 0.8f))
                 ) {
                     listOf("home" to "خانه", "week" to "هفتگی", "add" to "ثبت", "records" to "سوابق", "reports" to "گزارش").forEach { (key, label) ->
                         NavigationBarItem(
@@ -302,7 +302,7 @@ private fun KarbanApp(
                             onClick = { if (key == "add") beginNew() else page = key },
                             icon = { Text(when (key) { "home" -> "⌂"; "week" -> "▦"; "add" -> "＋"; "records" -> "≡"; else -> "▤" }, fontSize = if (page == key) 21.sp else 19.sp, fontWeight = FontWeight.Bold) },
                             label = { Text(label, fontSize = 10.sp, fontWeight = if (page == key) FontWeight.Bold else FontWeight.Medium) },
-                            colors = NavigationBarItemDefaults.colors(selectedIconColor = AccentBright, selectedTextColor = AccentBright, indicatorColor = Accent.copy(alpha = 0.15f), unselectedIconColor = secondary, unselectedTextColor = secondary)
+                            colors = NavigationBarItemDefaults.colors(selectedIconColor = if (isLight) Accent else AccentBright, selectedTextColor = if (isLight) Accent else AccentBright, indicatorColor = Accent.copy(alpha = 0.15f), unselectedIconColor = secondary, unselectedTextColor = secondary)
                         )
                     }
                 }
@@ -316,7 +316,7 @@ private fun KarbanApp(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         Box(Modifier.size(38.dp).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(AccentBright, Accent)), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                            Text("K", color = Color(0xFF07110E), fontSize = 21.sp, fontWeight = FontWeight.Black)
+                            Text("K", color = Color(0xFF051A11), fontSize = 21.sp, fontWeight = FontWeight.Black)
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                             Text("KARBAN", color = foreground, fontWeight = FontWeight.Black, letterSpacing = 2.sp, fontSize = 15.sp)
@@ -362,9 +362,9 @@ private fun KarbanApp(
                             }
                             Column(
                                 Modifier.fillMaxWidth()
-                                    .border(1.dp, Color(0xFF54743C).copy(alpha = 0.55f), RoundedCornerShape(25.dp))
+                                    .border(1.dp, Color(0xFF367A59).copy(alpha = 0.55f), RoundedCornerShape(25.dp))
                                     .background(
-                                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF243B28), Color(0xFF14241B), Color(0xFF101914))),
+                                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF1A4B35), Color(0xFF103B2B), Color(0xFF0A241A))),
                                         RoundedCornerShape(25.dp)
                                     ).padding(21.dp),
                                 verticalArrangement = Arrangement.spacedBy(9.dp)
@@ -1049,7 +1049,7 @@ private fun Metric(label: String, value: String, surface: Color, muted: Color, m
 }
 @Composable
 private fun PrimaryButton(label: String, action: () -> Unit) {
-    Button(onClick = action, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF11180D)), shape = RoundedCornerShape(17.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 1.dp)) {
+    Button(onClick = action, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF051A11)), shape = RoundedCornerShape(17.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 1.dp)) {
         Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, letterSpacing = 0.1.sp)
     }
 }
